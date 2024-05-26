@@ -75,15 +75,18 @@ def calculate_velocities(waypoints):
     dx = current_point[0] - prev_point[0]
     dy = current_point[1] - prev_point[1]
     distance = np.sqrt(dx**2 + dy**2)
+    if distance != 0.0:
+        # Velocity is assumed to be constant between waypoints
+        # (adjust this logic if you have additional information about speed)
+        velocity = [[dx / distance], [dy / distance]]
+    else:
+        velocity = [[0.0], [0.0]]
 
-    # Velocity is assumed to be constant between waypoints
-    # (adjust this logic if you have additional information about speed)
-    velocity = (dx / distance, dy / distance)
     velocities.append(velocity)
   velocity = [[0.0], [0.0]]
   velocities.append(velocity)
 
-  return np.array(velocities)
+  return np.squeeze(np.array(velocities))
 
 class MainWindow(QMainWindow):
     def __init__(self):
