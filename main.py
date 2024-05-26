@@ -117,6 +117,7 @@ class MainWindow(QMainWindow):
         self.progressBar.setValue(0)
         self.thread = Thread(target=self.connect, args=(self.config.ip_addr,))
         self.thread.start()
+        self.num_points = 760
 
         self.transition = defaultdict(dict)
         self.transition[State.INITIALIZED][Action.IS_ARMABLE] = State.ARMED
@@ -136,6 +137,7 @@ class MainWindow(QMainWindow):
         self.btnUp.clicked.connect(self.up_click)
         self.btnDown.clicked.connect(self.down_click)
         self.btnSendTraj.clicked.connect(self.sendTrajectory)
+        self.maxVelText.textChanged.connect(self.updateVel)
 
         # intialize buttons
         self.btnLaunch.setEnabled(False)
@@ -145,6 +147,20 @@ class MainWindow(QMainWindow):
         self.quad = Quadrotor(size=0.5)
 
         self.viewer.addWidget(self.quad.canvas)
+
+    def updateVel(self):
+        def speed_to_points(x):
+            # −39.27135903x2+107.71750607x+661.00327388
+            return int(-39.27135903 * (x ** 2) + 107.71750607 * x + 661.00327388)
+
+        text = self.maxVelText.text()
+        try:
+            maxVel = float(text)
+            self.num_points = speed_to_points(maxVel)
+            print(f'max vel changed to {maxVel} num points {self.num_points}')
+        except:
+            pass
+
 
 
 
@@ -171,9 +187,9 @@ class MainWindow(QMainWindow):
             u = np.array([[vx], [vy]])
             self.xEst, self.PEst = ekf_estimation(self.xEst, self.PEst, z, u, dt)
 
-
+            self.VMAX = max(self.VMAX, np.sqrt(self.xEst[2, 0] ** 2 + self.xEst[3, 0] ** 2))
             logging.debug(f"x = {self.xEst[0, 0]:.3f} y = {self.xEst[1, 0]:.3f} vx = {self.xEst[2, 0]:.3f} vy = {self.xEst[3, 0]:.3f} ")
-
+            logging.info(f"VMAX = {self.VMAX}")
 
         elif self.traj_index - 10 < len(self.traj):
             self.publish_cmd_vel(0, 0, 0)
@@ -183,18 +199,22 @@ class MainWindow(QMainWindow):
 
     def sendTrajectory(self):
 
+
+
         if not os.path.exists(self.config.traj_path):
             logging.error(f'{self.config.traj_path} does not exist!')
             return
         logging.info('sending trajectory')
 
         if self.state == State.HOVER:
+            self.VMAX = 0.0
             self.xEst = np.zeros((6, 1), dtype=np.float32)
             self.PEst = np.eye(6, dtype=np.float32)
             self.xEst[0, 0] = self.coord[0]
             self.xEst[1, 0] = self.coord[1]
             # self.traj = np.loadtxt(self.config.traj_path, delimiter=",")
-            xx, yy = generate_spiral_eight(num_points=500)
+
+            xx, yy = generate_spiral_eight(num_points=self.num_points)
             self.traj = np.column_stack((xx, yy))
             self.traj_vel = calculate_derivaties(self.traj)
             self.traj_acc = calculate_derivaties(self.traj_vel)
