@@ -53,7 +53,7 @@ class Action(Enum):
     HAS_ARRIVED = 2
     DISARMED = 3
 
-def calculate_velocities(waypoints):
+def calculate_derivaties(waypoints):
   """
   Calculates velocities for a given set of waypoints.
 
@@ -78,15 +78,15 @@ def calculate_velocities(waypoints):
     if distance != 0.0:
         # Velocity is assumed to be constant between waypoints
         # (adjust this logic if you have additional information about speed)
-        velocity = [[dx / distance], [dy / distance]]
+        velocity = (dx / distance, dy / distance)
     else:
-        velocity = [[0.0], [0.0]]
+        velocity = (0.0, 0.0)
 
     velocities.append(velocity)
-  velocity = [[0.0], [0.0]]
+  velocity = (0.0, 0.0)
   velocities.append(velocity)
 
-  return np.squeeze(np.array(velocities))
+  return np.array(velocities)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -128,34 +128,33 @@ class MainWindow(QMainWindow):
 
         self.viewer.addWidget(self.quad.canvas)
 
-        self.xEst = np.zeros((5, 1))
-        self.PEst = np.eye(5)
+
 
 
     def traj_callback(self):
         self.traj_index += 1
         if self.traj_index < len(self.traj):
-            target = self.traj[self.traj_index][1:]
+            target = self.traj[self.traj_index][1:3]
             target_vel = self.traj_vel[self.traj_index]
-
-
-            # vel = target - self.coord
+            target_acc = self.traj_acc[self.traj_index]
             dt = self.config.traj_dt / 1000.0
-            try:
-                dvx = (target_vel[0] - self.xEst[3, 0]) * dt
-                dvy = (target_vel[1] - self.xEst[4, 0]) * dt
-                vx = (target[0] - self.xEst[0, 0]) + dvx
-                vy = (target[1] - self.xEst[1, 0]) + dvy
-                logging.debug(f"[Traj] vx = {vx:.3f}, vy = {vy:.3f} dvx = {dvx:.3f}, dvy = {dvy:.3f}")
-                self.publish_cmd_vel(vy, vx, 0.0)
-                z = np.array([[self.coord[0]], [self.coord[1]]])
-                u = np.array([[vx], [vy]])
-                self.xEst, self.PEst = ekf_estimation(self.xEst, self.PEst, z, u, dt)
-            except Exception as e:
-                logging.error(f"[Traj]{e}")
+
+            setpoint = np.vstack((target, target_vel, target_acc)).flatten()
+            current = np.squeeze(self.xEst)
+            error = setpoint - current
+            K = np.array([
+                [1, 0, dt, 0, dt * dt / 2.0, 0],
+                [0, 1, 0, dt, 0, dt * dt / 2.0]
+            ])
+            vx, vy = K @ error
+
+            self.publish_cmd_vel(vy, vx, 0.0)
+            z = np.array([[self.coord[0]], [self.coord[1]]])
+            u = np.array([[vx], [vy]])
+            self.xEst, self.PEst = ekf_estimation(self.xEst, self.PEst, z, u, dt)
 
 
-            logging.debug(f"x = {self.xEst[0, 0]:.3f} y = {self.xEst[1, 0]:.3f} vx = {self.xEst[3, 0]:.3f} vy = {self.xEst[4, 0]:.3f} ")
+            logging.debug(f"x = {self.xEst[0, 0]:.3f} y = {self.xEst[1, 0]:.3f} vx = {self.xEst[2, 0]:.3f} vy = {self.xEst[3, 0]:.3f} ")
 
 
         elif self.traj_index - 10 < len(self.traj):
@@ -172,9 +171,14 @@ class MainWindow(QMainWindow):
         logging.info('sending trajectory')
 
         if self.state == State.HOVER:
+            self.xEst = np.zeros((6, 1), dtype=np.float32)
+            self.PEst = np.eye(6, dtype=np.float32)
+            self.xEst[0, 0] = self.coord[0]
+            self.xEst[1, 0] = self.coord[1]
             self.traj = np.loadtxt(self.config.traj_path, delimiter=",")
-            self.traj_vel = calculate_velocities(self.traj[:, 1:3])
-            print(self.traj.shape, self.traj_vel.shape)
+            self.traj_vel = calculate_derivaties(self.traj[:, 1:3])
+            self.traj_acc = calculate_derivaties(self.traj_vel)
+            print(self.traj.shape, self.traj_vel.shape, self.traj_acc.shape)
 
             self.traj_timer = QTimer()
             self.traj_index = 0
@@ -279,8 +283,7 @@ class MainWindow(QMainWindow):
             logging.info("vehicle reached to hovering position")
             self.progressBar.setValue(100)
             self.btnSendTraj.setEnabled(True)
-            self.xEst[0, 0] = self.coord[0]
-            self.xEst[1, 0] = self.coord[1]
+
 
         elif self.state == State.INITIALIZED:
             logging.info("vehicle landed")

@@ -4,25 +4,29 @@ import numpy as np
 Q = np.diag([
     0.1,  # variance of location on x-axis
     0.1,  # variance of location on y-axis
-    np.deg2rad(1.0),  # variance of yaw angle
     0.08,  # variance of velocity on x-axis
-    0.08  # variance of velocity on y-axis
+    0.08,  # variance of velocity on y-axis
+    0.06,  # variance of acceleration on x-axis
+    0.06  # variance of acceleration on y-axis
 ]) ** 2  # predict state covariance
 R = np.diag([0.01, 0.01]) ** 2  # Observation x,y position covariance
 
 def motion_model(x, u, DT):
-    F = np.array([[1.0, 0, 0, 0, 0],
-                  [0, 1.0, 0, 0, 0],
-                  [0, 0, 1.0, 0, 0],
-                  [0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0]])
+    F = np.array([[1.0, 0, 0, 0, 0.5 * DT * DT, 0],
+                  [0, 1.0, 0, 0, 0, 0.5 * DT * DT],
+                  [0, 0, 0.0, 0, 0, 0],
+                  [0, 0, 0, 0, 0, 0],
+                  [0, 0, 0, 0, 0, 0],
+                  [0, 0, 0, 0, 0, 0]
+                  ], dtype=np.float32)
 
-    B = np.array([[DT * x[3, 0], 0],
-                  [DT * x[4, 0], 0],
-                  [0.0, DT],
+    B = np.array([[DT, 0],
+                  [DT, 0],
                   [1.0, 0.0],
-                  [1.0, 0.0]
-                  ])
+                  [1.0, 0.0],
+                  [1.0 / DT, 0.0],
+                  [1.0 / DT, 0.0]
+                  ], dtype=np.float32)
 
     x = F @ x + B @ u
 
@@ -31,9 +35,9 @@ def motion_model(x, u, DT):
 
 def observation_model(x):
     H = np.array([
-        [1, 0, 0, 0, 0],
-        [0, 1, 0, 0, 0]
-    ])
+        [1, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0]
+    ], dtype=np.float32)
     z = H @ x
 
     return z
@@ -44,35 +48,26 @@ def jacob_f(x, u, DT):
     Jacobian of Motion Model
 
     motion model
-    x_{t+1} = x_t+v*s*dt*cos(yaw)
-    y_{t+1} = y_t+v*s*dt*sin(yaw)
-    yaw_{t+1} = yaw_t+omega*dt
-    v_{t+1} = v{t}
-    s_{t+1} = s{t}
-    so
-    dx/dyaw = -v*s*dt*sin(yaw)
-    dx/dv = dt*s*cos(yaw)
-    dx/ds = dt*v*cos(yaw)
-    dy/dyaw = v*s*dt*cos(yaw)
-    dy/dv = dt*s*sin(yaw)
-    dy/ds = dt*v*sin(yaw)
     """
-    yaw = x[2, 0]
     vx = u[0, 0]
     vy = u[1, 0]
-    s = x[4, 0]
+    ax = x[4, 0]
+    ay = x[5, 0]
+
     jF = np.array([
-        [1.0, 0.0, 0.0, DT * vx, 0.0],
-        [0.0, 1.0, 0.0, 0.0, DT * vy],
-        [0.0, 0.0, 1.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0, 1.0, 0.0],
-        [0.0, 0.0, 0.0, 0.0, 1.0]])
+        [1.0, 0.0, DT * vx, 0.0, 0.5 * DT * DT * ax, 0.0],
+        [0.0, 1.0, 0.0, DT * vy, 0.0, 0.5 * DT * DT * ay],
+        [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+    ], dtype=np.float32)
     return jF
 
 
 def jacob_h():
-    jH = np.array([[1, 0, 0, 0, 0],
-                   [0, 1, 0, 0, 0]])
+    jH = np.array([[1, 0, 0, 0, 0, 0],
+                   [0, 1, 0, 0, 0, 0]], dtype=np.float32)
     return jH
 
 
