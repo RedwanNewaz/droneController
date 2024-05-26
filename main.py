@@ -7,6 +7,7 @@ from PyQt5 import uic
 from PyQt5.QtCore import QTimer
 from threading import Thread
 import PyQt5
+from EKF import  ekf_estimation
 
 import configparser
 from enum import Enum
@@ -52,6 +53,37 @@ class Action(Enum):
     HAS_ARRIVED = 2
     DISARMED = 3
 
+def calculate_velocities(waypoints):
+  """
+  Calculates velocities for a given set of waypoints.
+
+  Args:
+      waypoints (list): A list of waypoints, where each waypoint is a tuple (x, y).
+
+  Returns:
+      list: A list of velocities, where each velocity is a tuple (vx, vy).
+  """
+
+  num_points = len(waypoints)
+  velocities = []
+  for i in range(1, num_points):
+    # Get current and previous waypoints
+    current_point = waypoints[i]
+    prev_point = waypoints[i-1]
+
+    # Calculate relative distance (assuming Euclidean distance)
+    dx = current_point[0] - prev_point[0]
+    dy = current_point[1] - prev_point[1]
+    distance = np.sqrt(dx**2 + dy**2)
+
+    # Velocity is assumed to be constant between waypoints
+    # (adjust this logic if you have additional information about speed)
+    velocity = (dx / distance, dy / distance)
+    velocities.append(velocity)
+  velocity = [[0.0], [0.0]]
+  velocities.append(velocity)
+
+  return np.array(velocities)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -93,15 +125,36 @@ class MainWindow(QMainWindow):
 
         self.viewer.addWidget(self.quad.canvas)
 
+        self.xEst = np.zeros((5, 1))
+        self.PEst = np.eye(5)
+
 
     def traj_callback(self):
         self.traj_index += 1
         if self.traj_index < len(self.traj):
             target = self.traj[self.traj_index][1:]
-            vel = target - self.coord
-            vx, vy, vz = vel
-            logging.debug(f"[Traj] vx = {vx:.3f}, vy = {vy:.3f} ")
-            self.publish_cmd_vel(vy, vx, -vz)
+            target_vel = self.traj_vel[self.traj_index]
+
+
+            # vel = target - self.coord
+            dt = self.config.traj_dt / 1000.0
+            try:
+                dvx = (target_vel[0] - self.xEst[3, 0]) * dt
+                dvy = (target_vel[1] - self.xEst[4, 0]) * dt
+                vx = (target[0] - self.xEst[0, 0]) + dvx
+                vy = (target[1] - self.xEst[1, 0]) + dvy
+                logging.debug(f"[Traj] vx = {vx:.3f}, vy = {vy:.3f} dvx = {dvx:.3f}, dvy = {dvy:.3f}")
+                self.publish_cmd_vel(vy, vx, 0.0)
+                z = np.array([[self.coord[0]], [self.coord[1]]])
+                u = np.array([[vx], [vy]])
+                self.xEst, self.PEst = ekf_estimation(self.xEst, self.PEst, z, u, dt)
+            except Exception as e:
+                logging.error(f"[Traj]{e}")
+
+
+            logging.debug(f"x = {self.xEst[0, 0]:.3f} y = {self.xEst[1, 0]:.3f} vx = {self.xEst[3, 0]:.3f} vy = {self.xEst[4, 0]:.3f} ")
+
+
         elif self.traj_index - 10 < len(self.traj):
             self.publish_cmd_vel(0, 0, 0)
         else:
@@ -117,6 +170,9 @@ class MainWindow(QMainWindow):
 
         if self.state == State.HOVER:
             self.traj = np.loadtxt(self.config.traj_path, delimiter=",")
+            self.traj_vel = calculate_velocities(self.traj[:, 1:3])
+            print(self.traj.shape, self.traj_vel.shape)
+
             self.traj_timer = QTimer()
             self.traj_index = 0
             self.traj_timer.timeout.connect(self.traj_callback)
@@ -220,6 +276,8 @@ class MainWindow(QMainWindow):
             logging.info("vehicle reached to hovering position")
             self.progressBar.setValue(100)
             self.btnSendTraj.setEnabled(True)
+            self.xEst[0, 0] = self.coord[0]
+            self.xEst[1, 0] = self.coord[1]
 
         elif self.state == State.INITIALIZED:
             logging.info("vehicle landed")
