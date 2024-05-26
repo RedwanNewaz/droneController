@@ -53,6 +53,24 @@ class Action(Enum):
     HAS_ARRIVED = 2
     DISARMED = 3
 
+def generate_spiral_eight(num_points, x_scale=3.5, y_scale=2.0, t0=0.0):
+  """
+  Generates coordinates for points on a circle.
+
+  Args:
+      num_points (int): Number of points on the circle.
+      x_scale (float, optional): Scaling factor for x-coordinate. Defaults to 2.0.
+      y_scale (float, optional): Scaling factor for y-coordinate. Defaults to 2.0.
+      t0 (float, optional): Offset value for the angle. Defaults to 0.0.
+
+  Returns:
+      tuple: A tuple containing two NumPy arrays (x_coordinates, y_coordinates).
+  """
+  theta = np.linspace(t0, t0 + 2*np.pi, num_points)  # Create angles for all points
+  x = x_scale * np.cos(theta) * np.sin(theta)
+  y = y_scale * np.sin(theta)
+  return x, y
+
 def calculate_derivaties(waypoints):
   """
   Calculates velocities for a given set of waypoints.
@@ -134,7 +152,7 @@ class MainWindow(QMainWindow):
     def traj_callback(self):
         self.traj_index += 1
         if self.traj_index < len(self.traj):
-            target = self.traj[self.traj_index][1:3]
+            target = self.traj[self.traj_index]
             target_vel = self.traj_vel[self.traj_index]
             target_acc = self.traj_acc[self.traj_index]
             dt = self.config.traj_dt / 1000.0
@@ -175,8 +193,10 @@ class MainWindow(QMainWindow):
             self.PEst = np.eye(6, dtype=np.float32)
             self.xEst[0, 0] = self.coord[0]
             self.xEst[1, 0] = self.coord[1]
-            self.traj = np.loadtxt(self.config.traj_path, delimiter=",")
-            self.traj_vel = calculate_derivaties(self.traj[:, 1:3])
+            # self.traj = np.loadtxt(self.config.traj_path, delimiter=",")
+            xx, yy = generate_spiral_eight(num_points=500)
+            self.traj = np.column_stack((xx, yy))
+            self.traj_vel = calculate_derivaties(self.traj)
             self.traj_acc = calculate_derivaties(self.traj_vel)
             print(self.traj.shape, self.traj_vel.shape, self.traj_acc.shape)
 
