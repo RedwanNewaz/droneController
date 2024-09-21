@@ -160,6 +160,11 @@ class MainWindow(QMainWindow):
         self.plannerInterface.startRadio = self.startPos
         self.updateButton.clicked.connect(self.plannerInterface.updateButton)
 
+        self.plannerInterface.envComboBox = self.loadEnvCombo
+        self.plannerInterface.setEnv()
+
+
+
 
 
     def updateVel(self):

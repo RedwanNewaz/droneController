@@ -15,10 +15,20 @@ class PlannerInterface:
         self.startTxt = None
         self.startRadio = None
         self.pathPlot = None
+        self.envComboBox = None
 
         colors = ['red', 'green']
         self.scatter = self.ax.scatter([-2, -2], [-2, -2], c=colors)
-        self.config_env('envs/env1.yaml')
+        self.config_env('envs/%s' % "env1.yaml")
+
+    def setEnv(self):
+        self.envComboBox.currentTextChanged.connect(self.on_combobox_changed)
+        self.envComboBox.setCurrentText("env1.yaml")
+
+    def on_combobox_changed(self, value):
+        print("Current text:", value)
+        self.config_env('envs/%s' % value)
+        self.canvas.draw_idle()
 
     def config_env(self, env):
         # ====Search Path with RRT====
