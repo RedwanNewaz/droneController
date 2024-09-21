@@ -3,3 +3,5 @@ dronekit
 dronekit-sitl
 pyqt5
 matplotlib
+pyaml
+python-fcl

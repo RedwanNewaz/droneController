@@ -21,7 +21,7 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     level=logging.INFO,
     datefmt='%H:%M:%S')
-
+from planner import PlannerInterface
 
 class Config:
     def __init__(self):
@@ -110,7 +110,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
 
         super().__init__()
-        uic.loadUi('window.ui', self)
+        uic.loadUi('window_v1.ui', self)
         self.config = Config()
         self.state = State.LAND
         self.coord = np.zeros(3)
@@ -145,8 +145,10 @@ class MainWindow(QMainWindow):
 
         # add visualizer
         self.quad = Quadrotor(size=0.5)
+        self.plannerInterface = PlannerInterface()
+        self.drone_view.addWidget(self.quad.canvas)
+        self.plan_view.addWidget(self.plannerInterface.canvas)
 
-        self.viewer.addWidget(self.quad.canvas)
 
     def updateVel(self):
         def speed_to_points(x):
