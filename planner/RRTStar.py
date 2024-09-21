@@ -31,6 +31,7 @@ class RRTStar(RRT):
                  goal,
                  obstacle_list,
                  rand_area,
+                 check_collision,
                  expand_dis=30.0,
                  path_resolution=1.0,
                  goal_sample_rate=20,
@@ -54,6 +55,7 @@ class RRTStar(RRT):
         self.goal_node = self.Node(goal[0], goal[1])
         self.search_until_max_iter = search_until_max_iter
         self.node_list = []
+        self.check_collision = check_collision
 
     def planning(self, animation=True):
         """

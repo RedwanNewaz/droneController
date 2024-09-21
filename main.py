@@ -145,9 +145,21 @@ class MainWindow(QMainWindow):
 
         # add visualizer
         self.quad = Quadrotor(size=0.5)
+
+
+
+        # planner interface
         self.plannerInterface = PlannerInterface()
         self.drone_view.addWidget(self.quad.canvas)
         self.plan_view.addWidget(self.plannerInterface.canvas)
+
+        ## add buttons
+        self.planButton.clicked.connect(self.plannerInterface.plan)
+        self.plannerInterface.startTxt = self.goalInputText
+        self.plannerInterface.goalTxt = self.startInputText
+        self.plannerInterface.startRadio = self.startPos
+        self.updateButton.clicked.connect(self.plannerInterface.updateButton)
+
 
 
     def updateVel(self):
