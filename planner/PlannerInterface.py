@@ -19,21 +19,11 @@ class PlannerInterface:
 
         colors = ['red', 'green']
         self.scatter = self.ax.scatter([-2, -2], [-2, -2], c=colors)
-        self.config_env('envs/%s' % "env1.yaml")
 
-    def setEnv(self):
-        self.envComboBox.currentTextChanged.connect(self.on_combobox_changed)
-        self.envComboBox.setCurrentText("env1.yaml")
 
-    def on_combobox_changed(self, value):
-        print("Current text:", value)
-        self.config_env('envs/%s' % value)
-        self.canvas.draw_idle()
-
-    def config_env(self, env):
+    def config_env(self, config):
         # ====Search Path with RRT====
-        with open(env) as file:
-            config = yaml.load(file, Loader=yaml.SafeLoader)
+
         self.obstacle_list = config['obstacle_list']
         self.boundary = config['boundary']
         self.ax.set_xlim(self.boundary[:2])

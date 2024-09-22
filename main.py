@@ -17,6 +17,8 @@ from Quadrotor import Quadrotor
 import numpy as np
 import os
 import logging
+import yaml
+from pathlib import Path
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     level=logging.INFO,
@@ -153,6 +155,14 @@ class MainWindow(QMainWindow):
         self.drone_view.addWidget(self.quad.canvas)
         self.plan_view.addWidget(self.plannerInterface.canvas)
 
+        # env config
+        self.loadEnvCombo.currentTextChanged.connect(self.on_combobox_changed)
+        for env in Path('envs').glob('*.yaml'):
+            self.loadEnvCombo.addItem(env.name)
+
+
+
+
         ## add buttons
         self.planButton.clicked.connect(self.plannerInterface.plan)
         self.plannerInterface.startTxt = self.goalInputText
@@ -160,11 +170,15 @@ class MainWindow(QMainWindow):
         self.plannerInterface.startRadio = self.startPos
         self.updateButton.clicked.connect(self.plannerInterface.updateButton)
 
-        self.plannerInterface.envComboBox = self.loadEnvCombo
-        self.plannerInterface.setEnv()
+        # self.plannerInterface.envComboBox = self.loadEnvCombo
 
 
-
+    def on_combobox_changed(self, value):
+        print("Current text:", value)
+        env = 'envs/%s' % value
+        with open(env) as file:
+            config = yaml.load(file, Loader=yaml.SafeLoader)
+        self.plannerInterface.config_env(config)
 
 
     def updateVel(self):
