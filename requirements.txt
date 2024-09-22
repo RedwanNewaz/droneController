@@ -5,3 +5,6 @@ pyqt5
 matplotlib
 pyaml
 python-fcl
+pyvista
+pyvistaqt
+meshio
