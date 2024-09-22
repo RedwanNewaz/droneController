@@ -6,7 +6,8 @@ class CollisionChecker:
         self.manager = self.getCollisionManager(obstacle_list)
         self.boundary = bounday
 
-    def is_inside_boundary(self, x, y):
+    def is_inside_boundary(self, p):
+        x, y = p
         xmin, xmax, ymin, ymax = self.boundary
         return xmin <= x <= xmax and ymin <= y <= ymax
 
@@ -23,28 +24,34 @@ class CollisionChecker:
         manager.registerObjects(collisionObjects)
         return manager
 
+    def getCollisionTraj(self, path, robot_size):
+        collisionObjects = []
+        for x, y in path:
+            cube_position = [x, y, 0]
+            sphere = fcl.Sphere(robot_size)
+            obj = fcl.CollisionObject(sphere, fcl.Transform(np.array(cube_position)))
+            collisionObjects.append(obj)
+        manager = fcl.DynamicAABBTreeCollisionManager()
+        manager.registerObjects(collisionObjects)
+        return manager
+
+
     def check_collision(self, node, obstacleList, robot_radius):
 
         if node is None:
             return False
 
-        for x, y in zip(node.path_x, node.path_y):
+        path = list(zip(node.path_x, node.path_y))
+        trajManager = self.getCollisionTraj(path, robot_radius)
 
-            if not self.is_inside_boundary(x, y):
-                return False # treat like collision
+        cdata = fcl.CollisionData()
 
-            robot_position = np.array([x, y, 0])
-            robot_sphere = fcl.Sphere(robot_radius)
-            robot = fcl.CollisionObject(robot_sphere, fcl.Transform(robot_position))
-
-            req = fcl.CollisionRequest()
-            cdata = fcl.CollisionData()
-
-            self.manager.collide(robot, cdata, fcl.defaultCollisionCallback)
-
-            if cdata.result.is_collision:
-                print('collision detected: ', x, y)
-                return False # collision
+        self.manager.collide(trajManager, cdata, fcl.defaultCollisionCallback)
+        if cdata.result.is_collision:
+            return False # collision
+        inside = map(self.is_inside_boundary, path)
+        if not all(inside):
+            return False # outside boundary
 
         return True  # safe
 
