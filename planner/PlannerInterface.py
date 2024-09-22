@@ -5,8 +5,10 @@ from matplotlib.patches import Rectangle
 from .RRTStar import RRTStar
 from .CollisionChecker import CollisionChecker
 from .PathSmoothing import path_smoothing
+from PyQt5.QtCore import QTimer, QObject, pyqtSignal, pyqtSlot
+from trajectory import TrajectoryInterface
 import yaml
-class PlannerInterface:
+class PlannerInterface(QObject):
     def __init__(self):
         self.fig = Figure()
         self.ax = self.fig.add_subplot()
@@ -20,6 +22,7 @@ class PlannerInterface:
 
         colors = ['red', 'green']
         self.scatter = self.ax.scatter([-2, -2], [-2, -2], c=colors)
+        super().__init__()
 
 
     def config_env(self, config):
@@ -42,10 +45,18 @@ class PlannerInterface:
         offsets[index] = [new_x, new_y]
         self.scatter.set_offsets(offsets)
         self.canvas.draw_idle()
+    @pyqtSlot(str)
+    def updateRobot(self, position):
+        # print('received ', position)
+        coord = list(map(float, position.split(",")))
+        self.update_point(0, coord[0], coord[1])
+
     def updateButton(self):
         if self.pathPlot:
-            print(self.pathPlot.get_xdata())
-            print(self.pathPlot.get_ydata())
+            path = np.column_stack((self.pathPlot.get_xdata(), self.pathPlot.get_ydata()))[::-1]
+            self.trajExec = TrajectoryInterface(path, dt=0.1)
+            self.trajExec.setPoint.connect(self.updateRobot)
+            self.trajExec.start()
 
 
     def plan(self):
@@ -104,3 +115,4 @@ class PlannerInterface:
             # self.ax.grid(True)
             print("found path!!: ", path)
             self.canvas.draw_idle()
+

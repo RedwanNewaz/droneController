@@ -84,16 +84,17 @@ def calculate_derivaties(waypoints):
     # Calculate relative distance (assuming Euclidean distance)
     dx = current_point[0] - prev_point[0]
     dy = current_point[1] - prev_point[1]
-    distance = np.sqrt(dx**2 + dy**2)
+    dz = current_point[2] - prev_point[2]
+    distance = np.sqrt(dx**2 + dy**2 + dz**2)
     if distance != 0.0:
         # Velocity is assumed to be constant between waypoints
         # (adjust this logic if you have additional information about speed)
-        velocity = (dx / distance, dy / distance)
+        velocity = (dx / distance, dy / distance, dz / distance if distance > 0 else 0)
     else:
-        velocity = (0.0, 0.0)
+        velocity = (0.0, 0.0, 0.0)
 
     velocities.append(velocity)
-  velocity = (0.0, 0.0)
+  velocity = (0.0, 0.0, 0.0)
   velocities.append(velocity)
 
   return np.array(velocities)
