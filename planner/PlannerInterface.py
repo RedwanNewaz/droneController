@@ -94,9 +94,7 @@ class PlannerInterface:
         if path is None:
             print("Cannot find path")
         else:
-            while len(self.ax.lines):
-                self.ax.lines.pop(0)
-
+            self.ax.lines.clear()
             self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'g--')
             path = path_smoothing(path, rrt_star.max_iter, self.obstacle_list)
             self.pathPlot, = self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'r--')
