@@ -4,6 +4,7 @@ from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
 from .RRTStar import RRTStar
 from .CollisionChecker import CollisionChecker
+from .PathSmoothing import path_smoothing
 import yaml
 class PlannerInterface:
     def __init__(self):
@@ -52,7 +53,7 @@ class PlannerInterface:
         offsets = self.scatter.get_offsets()
         start, goal = offsets
         print(self.scatter.get_offsets())
-        self.demo('envs/env1.yaml', start, goal)
+        self.demo(start, goal)
 
     def draw_obstacles(self, obstacle_list):
         for obstacle in obstacle_list:
@@ -75,7 +76,7 @@ class PlannerInterface:
                 self.update_point(1, event.xdata, event.ydata)
 
 
-    def demo(self, env, start, goal):
+    def demo(self, start, goal):
 
         # config collision checker
         collisionManager = CollisionChecker(self.obstacle_list, self.boundary)
@@ -93,10 +94,11 @@ class PlannerInterface:
         if path is None:
             print("Cannot find path")
         else:
-            if self.pathPlot:
+            while len(self.ax.lines):
                 self.ax.lines.pop(0)
-                self.pathPlot = None  # Clear the reference
 
+            self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'g--')
+            path = path_smoothing(path, rrt_star.max_iter, self.obstacle_list)
             self.pathPlot, = self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'r--')
 
             # self.ax.grid(True)

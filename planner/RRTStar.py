@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import pathlib
 
 from .RRT import RRT
-
 show_animation = False
 
 
