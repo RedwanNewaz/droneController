@@ -43,62 +43,6 @@ class Config:
             logging.error(f'{self.traj_path} does not exist!')
             return
 
-
-
-def generate_spiral_eight(num_points, x_scale=3.5, y_scale=2.0, t0=0.0):
-  """
-  Generates coordinates for points on a circle.
-
-  Args:
-      num_points (int): Number of points on the circle.
-      x_scale (float, optional): Scaling factor for x-coordinate. Defaults to 2.0.
-      y_scale (float, optional): Scaling factor for y-coordinate. Defaults to 2.0.
-      t0 (float, optional): Offset value for the angle. Defaults to 0.0.
-
-  Returns:
-      tuple: A tuple containing two NumPy arrays (x_coordinates, y_coordinates).
-  """
-  theta = np.linspace(t0, t0 + 2*np.pi, num_points)  # Create angles for all points
-  x = x_scale * np.cos(theta) * np.sin(theta)
-  y = y_scale * np.sin(theta)
-  return x, y
-
-def calculate_derivaties(waypoints):
-  """
-  Calculates velocities for a given set of waypoints.
-
-  Args:
-      waypoints (list): A list of waypoints, where each waypoint is a tuple (x, y).
-
-  Returns:
-      list: A list of velocities, where each velocity is a tuple (vx, vy).
-  """
-
-  num_points = len(waypoints)
-  velocities = []
-  for i in range(1, num_points):
-    # Get current and previous waypoints
-    current_point = waypoints[i]
-    prev_point = waypoints[i-1]
-
-    # Calculate relative distance (assuming Euclidean distance)
-    dx = current_point[0] - prev_point[0]
-    dy = current_point[1] - prev_point[1]
-    dz = current_point[2] - prev_point[2]
-    distance = np.sqrt(dx**2 + dy**2 + dz**2)
-    if distance != 0.0:
-        # Velocity is assumed to be constant between waypoints
-        # (adjust this logic if you have additional information about speed)
-        velocity = (dx / distance, dy / distance, dz / distance if distance > 0 else 0)
-    else:
-        velocity = (0.0, 0.0, 0.0)
-
-    velocities.append(velocity)
-  velocity = (0.0, 0.0, 0.0)
-  velocities.append(velocity)
-
-  return np.array(velocities)
-
 class MainWindow(QMainWindow):
     def __init__(self):
 
@@ -129,7 +73,7 @@ class MainWindow(QMainWindow):
 
         # intialize buttons
         self.btnLaunch.setEnabled(False)
-        self.btnSendTraj.setEnabled(False)
+        # self.btnSendTraj.setEnabled(False)
 
         #################################
 
@@ -180,9 +124,17 @@ class MainWindow(QMainWindow):
 
         # Create the PyVista QtInteractor
         boundary = config['boundary']
-        shape = [10, 10, 5]
-        self.quad = Quadrotor(self.centralwidget, boundary, shape)
+        dt = config['dt']
+        shape = np.array([boundary[1] - boundary[0], boundary[3] - boundary[2], 0]).astype('int')
+        self.quad = Quadrotor(self.centralwidget, dt, shape)
+        # add send trajectory button
+        self.btnSendTraj.clicked.connect(self.quad.sendTrajectory)
+
         self.drone_view.addWidget(self.quad.plotter.interactor)
+        for obstacle in config['obstacle_list']:
+            self.quad.add_cube(obstacle)
+        self.quad.update()
+
 
 
 

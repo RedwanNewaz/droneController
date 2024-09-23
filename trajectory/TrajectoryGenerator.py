@@ -199,6 +199,6 @@ def generate_trajectory(path, dt):
             if dist < 0.345:
                 break
             t += dt
-        result.append(path[-1].tolist())
+    result.append(path[-1].tolist())
 
     return result

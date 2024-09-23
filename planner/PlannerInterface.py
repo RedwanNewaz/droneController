@@ -30,6 +30,7 @@ class PlannerInterface(QObject):
 
         self.obstacle_list = config['obstacle_list']
         self.boundary = config['boundary']
+        self.dt = config['dt']
         self.ax.set_xlim(self.boundary[:2])
         self.ax.set_ylim(self.boundary[2:])
         self.draw_obstacles(self.obstacle_list)
@@ -54,7 +55,8 @@ class PlannerInterface(QObject):
     def updateButton(self):
         if self.pathPlot:
             path = np.column_stack((self.pathPlot.get_xdata(), self.pathPlot.get_ydata()))[::-1]
-            self.trajExec = TrajectoryInterface(path, dt=0.1)
+
+            self.trajExec = TrajectoryInterface(path, dt=self.dt)
             self.trajExec.setPoint.connect(self.updateRobot)
             self.trajExec.start()
 

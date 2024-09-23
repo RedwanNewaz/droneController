@@ -16,6 +16,7 @@ class TrajectoryInterface(QObject):
         self._timer.timeout.connect(self.onTimeout)
         self._timer.start(self._dt)
         print("trajectory execution started")
+        np.savetxt('trajs/traj.csv', self._traj, delimiter=',')
     def stop(self):
         self._timer.stop()
 
