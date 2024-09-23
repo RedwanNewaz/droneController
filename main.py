@@ -14,7 +14,8 @@ import configparser
 from enum import Enum
 from collections import defaultdict
 import time
-# from Quadrotor import Quadrotor
+
+from simulator import SimulatorInterface
 import numpy as np
 import os
 import logging
@@ -55,6 +56,9 @@ class MainWindow(QMainWindow):
 
         self.num_points = 760
 
+        self._sim = SimulatorInterface(self)
+        self._sim.start()
+
 
 
         #
@@ -75,22 +79,6 @@ class MainWindow(QMainWindow):
         self.btnLaunch.setEnabled(False)
         # self.btnSendTraj.setEnabled(False)
 
-        #################################
-
-
-
-
-
-
-
-        ##################################33
-        # add visualizer
-        # self.quad = Quadrotor(size=0.5)
-        # self.drone_view.addWidget(self.quad.canvas)
-
-
-
-
 
         # planner interface
         self.plannerInterface = PlannerInterface()
@@ -103,8 +91,6 @@ class MainWindow(QMainWindow):
             self.loadEnvCombo.addItem(env.name)
 
 
-
-
         ## add buttons
         self.planButton.clicked.connect(self.plannerInterface.plan)
         self.plannerInterface.startTxt = self.goalInputText
@@ -113,6 +99,14 @@ class MainWindow(QMainWindow):
         self.updateButton.clicked.connect(self.plannerInterface.updateButton)
 
         # self.plannerInterface.envComboBox = self.loadEnvCombo
+
+    def updateCoord(self, x, y, z):
+        self.coord[0] = x
+        self.coord[1] = y
+        self.coord[2] = z
+        self.lblLongValue.setText(f"{x:.4f}")
+        self.lblLatValue.setText(f"{y:.4f}")
+        self.lblAltValue.setText(f"{z:.4f}")
 
 
     def on_combobox_changed(self, value):
@@ -134,48 +128,6 @@ class MainWindow(QMainWindow):
         for obstacle in config['obstacle_list']:
             self.quad.add_cube(obstacle)
         self.quad.update()
-
-
-
-
-
-
-    #
-    # def updateFlightModeGUI(self, value):
-    #     logging.info(f'flight mode change to {value}')
-    #     index, mode = str(value).split(':')
-    #     self.lblFlightModeValue.setText(mode)
-    #
-    # def updateLocationGUI(self, location):
-    #     # self.lblLongValue.setText(str(location.global_frame.lon))
-    #     # self.lblLatValue.setText(str(location.global_frame.lat))
-    #     # location.local_frame.
-    #     x = location.local_frame.east
-    #     y = location.local_frame.north
-    #     z = location.local_frame.down
-    #
-    #     if x is None or y is None or z is None:
-    #         x,  y, z = 0, 0, 0
-    #     z = max(-z, 0.0)
-    #     logging.debug(f'location: {x}, {y}, {z}')
-    #     self.coord[0] = x
-    #     self.coord[1] = y
-    #     self.coord[2] = z
-    #
-    #     heading = np.deg2rad(45)
-    #     self.lblLongValue.setText(f"{x:.4f}")
-    #     self.lblLatValue.setText(f"{y:.4f}")
-    #     self.lblAltValue.setText(f"{z:.4f}")
-    #
-    #     self.quad.update_pose(x,y,z,0,0,heading)
-
-
-
-
-
-
-
-
 
 
 

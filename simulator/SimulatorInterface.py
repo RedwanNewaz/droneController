@@ -3,33 +3,60 @@ from collections import defaultdict
 from threading import Thread
 from dronekit import connect, VehicleMode
 import dronekit_sitl
+from PyQt5.QtCore import QTimer, QObject, pyqtSignal, QThread
+import time 
 
 import logging
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     level=logging.INFO,
     datefmt='%H:%M:%S')
-class SimulatorInterface:
-    def __init__(self):
+class SimulatorInterface(QThread):
+    def __init__(self, mainWindow):
         self.vehicle = None
         self.state = State.LAND
+        self.setTransitionGraph()
+        self.launchAlt = 1 # m
+        self.mainWindow = mainWindow
+        super().__init__()
+    
+    def setTransitionGraph(self):
         self.transition = defaultdict(dict)
         self.transition[State.INITIALIZED][Action.IS_ARMABLE] = State.ARMED
         self.transition[State.ARMED][Action.IS_ARMED] = State.TAKEOFF
         self.transition[State.TAKEOFF][Action.HAS_ARRIVED] = State.HOVER
         self.transition[State.LAND][Action.DISARMED] = State.INITIALIZED
-        self.thread = Thread(target=self.connect)
-        self.thread.start()
-        self.launchAlt = 1 # m
 
-    def connect(self):
+    def run(self):
         self.sitl = dronekit_sitl.start_default()
         self.connection_string = self.sitl.connection_string()
 
         # Connect to the Vehicle
-        logging.info('Connecting to vehicle on: %s' % self.connection_string)
+        logging.info('[SimulatorInterface]: Connecting to vehicle on: %s' % self.connection_string)
         self.vehicle = connect(self.connection_string, wait_ready=True)
         self.state = State.INITIALIZED
+        self.mainWindow.progressBar.setValue(25)
+
+        while True:
+            self.timerCallback()
+            if self.state != State.HOVER:
+                time.sleep(1)
+            else: break
+
+        
+
+        # Display Flight Mode
+        self.updateFlightModeGUI(self.vehicle.mode)
+        self.addObserverAndInit(
+            'mode'
+            , lambda vehicle, name, mode: self.updateFlightModeGUI(mode))
+
+        # Display Location Info
+        self.updateLocationGUI(self.vehicle.location)
+        self.addObserverAndInit(
+            'location'
+            , lambda vehicle, name, location: self.updateLocationGUI(location))
+
     def getAction(self, state: State):
         """get an action based on the state of the vehicle"""
         if state == State.INITIALIZED and self.vehicle.is_armable:
@@ -50,23 +77,25 @@ class SimulatorInterface:
             return
 
         self.state = self.transition[self.state][action]
-        logging.info("[State]: {} | Action = {}".format(self.state.name, self.vehicle.system_status.state))
+        logging.info("[SimulatorInterface]: State = {} | Action = {}".format(self.state.name, self.vehicle.system_status.state))
 
         if self.state == State.ARMED:
             self.vehicle.mode = VehicleMode("GUIDED")
             self.vehicle.armed = True
+            self.mainWindow.progressBar.setValue(50)
 
 
         elif self.state == State.TAKEOFF:
             self.vehicle.simple_takeoff(self.launchAlt)
+            self.mainWindow.progressBar.setValue(75)
 
         elif self.state == State.HOVER:
-            logging.info("vehicle reached to hovering position")
-
+            logging.info("[SimulatorInterface]: vehicle reached to hovering position")
+            self.mainWindow.progressBar.setValue(100)
 
         elif self.state == State.INITIALIZED:
-            logging.info("vehicle landed")
-            self.timer.stop()
+            logging.info("[SimulatorInterface]: vehicle landed")
+         
 
     def addObserverAndInit(self, name, cb):
         """We go ahead and call our observer once at startup to get an initial value"""
@@ -83,4 +112,10 @@ class SimulatorInterface:
         if x is None or y is None or z is None:
             x,  y, z = 0, 0, 0
         z = max(-z, 0.0)
-        logging.debug(f'location: {x}, {y}, {z}')
+        logging.debug(f'[SimulatorInterface]: location: {x}, {y}, {z}')
+        self.mainWindow.updateCoord(x, y, z)
+
+    def updateFlightModeGUI(self, value):
+        logging.info(f'[SimulatorInterface]: flight mode change to {value}')
+        index, mode = str(value).split(':')
+        self.mainWindow.lblFlightModeValue.setText(mode)
