@@ -5,6 +5,7 @@ from dronekit import connect, VehicleMode
 import dronekit_sitl
 from PyQt5.QtCore import QTimer, QObject, pyqtSignal, QThread
 import time 
+from controller import ControllerInterface
 
 import logging
 logging.basicConfig(
@@ -44,6 +45,8 @@ class SimulatorInterface(QThread):
             else: break
 
         
+        # self._controller = ControllerInterface(self.mainWindow, self.state, 
+        #                     self.vehicle)
 
         # Display Flight Mode
         self.updateFlightModeGUI(self.vehicle.mode)

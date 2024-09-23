@@ -21,6 +21,7 @@ class Quadrotor(QObject):
         self._dt = dt
         self._trajIndex = 0
         self.viewer_points = None
+        self.scale = VIEWER_SCALE
         # Create the grid world
         dx, dy, dz = 0.1, 0.1, 0.0  # 10 cm spacing
 

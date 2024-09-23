@@ -16,6 +16,7 @@ from collections import defaultdict
 import time
 
 from simulator import SimulatorInterface
+from controller import  ControllerInterface
 import numpy as np
 import os
 import logging
@@ -59,26 +60,8 @@ class MainWindow(QMainWindow):
         self._sim = SimulatorInterface(self)
         self._sim.start()
 
-
-
-        #
-        # self.btnLaunch.clicked.connect(self.launch_click)
-        #
-        # self.btnWest.clicked.connect(self.west_click)
-        # self.btnEast.clicked.connect(self.east_click)
-        # self.btnNorth.clicked.connect(self.north_click)
-        # self.btnSouth.clicked.connect(self.south_click)
-        # self.btnRTL.clicked.connect(self.rtl_click)
-        #
-        # self.btnUp.clicked.connect(self.up_click)
-        # self.btnDown.clicked.connect(self.down_click)
-        # self.btnSendTraj.clicked.connect(self.sendTrajectory)
-        # self.maxVelText.textChanged.connect(self.updateVel)
-
-        # intialize buttons
-        self.btnLaunch.setEnabled(False)
-        # self.btnSendTraj.setEnabled(False)
-
+        self._controller = ControllerInterface(self, self._sim)
+        self.quad = None
 
         # planner interface
         self.plannerInterface = PlannerInterface(self)
@@ -96,6 +79,9 @@ class MainWindow(QMainWindow):
         self.lblLongValue.setText(f"{self.coord[0]:.4f}")
         self.lblLatValue.setText(f"{self.coord[1]:.4f}")
         self.lblAltValue.setText(f"{self.coord[2]:.4f}")
+        if self.quad:
+            position = self.coord / self.quad.scale
+            self.quad.actor.position = position.tolist()
 
 
     def on_combobox_changed(self, value):
@@ -107,16 +93,36 @@ class MainWindow(QMainWindow):
 
         # Create the PyVista QtInteractor
         boundary = config['boundary']
-        dt = config['dt']
+        self._dt = dt = config['dt']
         shape = np.array([boundary[1] - boundary[0], boundary[3] - boundary[2], 0]).astype('int')
         self.quad = Quadrotor(self.centralwidget, dt, shape)
         # add send trajectory button
-        self.btnSendTraj.clicked.connect(self.quad.sendTrajectory)
+        # self.btnSendTraj.clicked.connect(self.quad.sendTrajectory)
+        self.btnSendTraj.clicked.connect(self.sendTrajectory)
 
         self.drone_view.addWidget(self.quad.plotter.interactor)
         for obstacle in config['obstacle_list']:
             self.quad.add_cube(obstacle)
         self.quad.update()
+
+    def onTimeout(self):
+        if self._trajIndex < len(self._traj):
+            position = self._traj[self._trajIndex]
+            vel = position - self.coord
+            self._controller.publish_cmd_vel(vel[1], vel[0], -vel[2])
+        elif self._trajIndex - 10 < len(self._traj):
+            self._controller.publish_cmd_vel(0, 0, 0)
+        else:
+            self._timer.stop()
+        self._trajIndex += 1
+    
+    def sendTrajectory(self):
+        """excute a trajectory and update the plotter."""
+        self._trajIndex = 0
+        self._traj = np.loadtxt('trajs/traj.csv', delimiter=',') 
+        self._timer = QTimer()
+        self._timer.timeout.connect(self.onTimeout)
+        self._timer.start(int(self._dt * 1000))
 
 
 
