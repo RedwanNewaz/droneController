@@ -28,29 +28,11 @@ logging.basicConfig(
     datefmt='%H:%M:%S')
 from planner import PlannerInterface
 
-
-
-class Config:
-    def __init__(self):
-        config = configparser.ConfigParser()
-        config.read('config.ini')
-        self.traj_path = f"{str(config['Trajectory']['traj_path'])}"
-        self.traj_dt = int(config['Trajectory']['traj_dt'])
-        self.default_takeoff_alt = float(config['DEFAULT']['TAKEOFF_ALTITUDE'])
-        self.default_cmd_vel = float(config['DEFAULT']['CMD_VEL'])
-        self.default_dt = float(config['DEFAULT']['DT'])
-        self.ip_addr = str(config['DRONEKIT']['IP_ADDR'])
-
-        if not os.path.exists(self.traj_path):
-            logging.error(f'{self.traj_path} does not exist!')
-            return
-
 class MainWindow(QMainWindow):
     def __init__(self):
 
         super().__init__()
         uic.loadUi('window_v1.ui', self)
-        self.config = Config()
 
         self.coord = np.zeros(3)
         self.progressBar.setValue(0)

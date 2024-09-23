@@ -117,7 +117,7 @@ class PlannerInterface(QObject):
             obstacle_list=self.obstacle_list,
             expand_dis=1,
             check_collision=collisionManager.check_collision,
-            robot_radius=0.4)
+            robot_radius=0.6)
         path = rrt_star.planning(animation=False)
 
         if path is None:
