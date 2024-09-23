@@ -81,32 +81,21 @@ class MainWindow(QMainWindow):
 
 
         # planner interface
-        self.plannerInterface = PlannerInterface()
-
-        self.plan_view.addWidget(self.plannerInterface.canvas)
-
+        self.plannerInterface = PlannerInterface(self)
         # env config
         self.loadEnvCombo.currentTextChanged.connect(self.on_combobox_changed)
         for env in Path('envs').glob('*.yaml'):
             self.loadEnvCombo.addItem(env.name)
 
-
-        ## add buttons
-        self.planButton.clicked.connect(self.plannerInterface.plan)
-        self.plannerInterface.startTxt = self.goalInputText
-        self.plannerInterface.goalTxt = self.startInputText
-        self.plannerInterface.startRadio = self.startPos
-        self.updateButton.clicked.connect(self.plannerInterface.updateButton)
-
-        # self.plannerInterface.envComboBox = self.loadEnvCombo
+     
 
     def updateCoord(self, x, y, z):
-        self.coord[0] = x
-        self.coord[1] = y
-        self.coord[2] = z
-        self.lblLongValue.setText(f"{x:.4f}")
-        self.lblLatValue.setText(f"{y:.4f}")
-        self.lblAltValue.setText(f"{z:.4f}")
+        self.coord[0] = max(0, x)
+        self.coord[1] = max(0, y)
+        self.coord[2] = max(0, z)
+        self.lblLongValue.setText(f"{self.coord[0]:.4f}")
+        self.lblLatValue.setText(f"{self.coord[1]:.4f}")
+        self.lblAltValue.setText(f"{self.coord[2]:.4f}")
 
 
     def on_combobox_changed(self, value):

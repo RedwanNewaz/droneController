@@ -9,20 +9,31 @@ from PyQt5.QtCore import QTimer, QObject, pyqtSignal, pyqtSlot
 from trajectory import TrajectoryInterface
 import yaml
 class PlannerInterface(QObject):
-    def __init__(self):
+    def __init__(self, mainWindow):
         self.fig = Figure()
         self.ax = self.fig.add_subplot()
         self.canvas = FigureCanvasQTAgg(self.fig)
         self.cid = self.canvas.mpl_connect('button_press_event', self.onclick)
-        self.goalTxt = None
-        self.startTxt = None
-        self.startRadio = None
-        self.pathPlot = None
-        self.envComboBox = None
+        
+        self.mainWindow = mainWindow
+        self.mainWindow.plan_view.addWidget(self.canvas)
 
+        self.goalTxt = self.mainWindow.goalInputText
+        self.startTxt = self.mainWindow.startInputText
+        self.startRadio = self.mainWindow.startPos
+        self.goalRadio = self.mainWindow.goalPos
+        self.mainWindow.planButton.clicked.connect(self.plan)
+        self.mainWindow.updateButton.clicked.connect(self.updateButton)
+
+        self.pathPlot = None
+    
         colors = ['red', 'green']
         self.scatter = self.ax.scatter([-2, -2], [-2, -2], c=colors)
         super().__init__()
+
+        # FIXME get start poisition from simulation
+        self.startRadio.setEnabled(False)
+        self.goalRadio.setChecked(True)
 
 
     def config_env(self, config):
@@ -78,6 +89,11 @@ class PlannerInterface(QObject):
             self.ax.add_patch(rect)
 
     def onclick(self, event):
+        # update start position
+        msg = "{:.3f},{:.3f}".format(self.mainWindow.coord[0], self.mainWindow.coord[1])
+        self.startTxt.setPlainText(msg)
+        self.update_point(0, self.mainWindow.coord[0], self.mainWindow.coord[1])
+
         if event.xdata is not None and event.ydata is not None:
             print(f"Clicked coordinates: x={event.xdata:.2f}, y={event.ydata:.2f}")
             msg = "{:.2f},{:.2f}".format(event.xdata, event.ydata)
@@ -115,6 +131,6 @@ class PlannerInterface(QObject):
             self.pathPlot, = self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'r--')
 
             # self.ax.grid(True)
-            print("found path!!: ", path)
+            print("found path!!: ")
             self.canvas.draw_idle()
 
