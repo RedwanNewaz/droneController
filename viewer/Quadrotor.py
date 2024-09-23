@@ -10,6 +10,7 @@ from pyvistaqt import QtInteractor
 import os
 import numpy as np
 from PyQt5.QtCore import QTimer, QObject, pyqtSignal
+from .angle import angle_mod
 
 VIEWER_SCALE = 10.0 # meter to cm
 class Quadrotor(QObject):
@@ -32,19 +33,22 @@ class Quadrotor(QObject):
         self.plotter.add_mesh(self.grid, style='wireframe', color='gray', opacity=0.5)
 
         # Load and scale the robot mesh
+        self.setActor((0.0, 0.0, 0.1))
+
+        # Set up the camera
+        self.plotter.camera_position = 'iso'
+        self.plotter.reset_camera()
+
+    def setActor(self, position):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         robot_mesh = pv.read(os.path.join(current_dir, 'Quadcopter.stl'))
         robot_mesh = robot_mesh.scale([0.0003192, 0.0003192, 0.0003192], inplace=False)
         rotate_degree = 90
         self.robot_mesh = robot_mesh.rotate_x(rotate_degree).translate(
-            (0.0, 0.0, 0.1)
+            position
         )
         # Add the robot mesh to the plotter
         self.actor = self.plotter.add_mesh(self.robot_mesh, color='red')
-
-        # Set up the camera
-        self.plotter.camera_position = 'iso'
-        self.plotter.reset_camera()
 
     def add_cube(self, obstacle, color='blue'):
         """Add a cube to the grid world at the specified position."""
@@ -58,10 +62,17 @@ class Quadrotor(QObject):
         self.plotter.update()
 
     def onTimeout(self):
-        # TODO relace path with trajectory
         if self._trajIndex < len(self._traj):
             position = self._traj[self._trajIndex]
+            currentPos = np.array(self.actor.position)
             self.actor.position = position.tolist()
+
+            # dy, dx, dz = position - currentPos
+            # theta = np.deg2rad(self.actor.orientation[-1])
+            # alpha = angle_mod(np.arctan2(dy, dx) - theta)
+            # self.actor.orientation = [0, 0, np.rad2deg(alpha)]
+
+
         else:
             self._timer.stop()
             self._trajIndex = 0
@@ -75,6 +86,7 @@ class Quadrotor(QObject):
         trajectory = pv.PolyData(self._traj)
         if self.viewer_points is not None:
             self.plotter.remove_actor(self.viewer_points)
+
 
         # Add the trajectory points to the plotter
         self.viewer_points = self.plotter.add_points(trajectory, render_points_as_spheres=True, point_size=5, color='grey')
