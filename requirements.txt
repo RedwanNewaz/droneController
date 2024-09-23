@@ -9,3 +9,4 @@ pyvista
 pyvistaqt
 meshio
 scipy
+pyvicon_datastream

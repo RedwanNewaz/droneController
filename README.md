@@ -14,6 +14,11 @@ There are many open source used in this project
 - Dronekit
 - Mavproxy
 
+## Display issue 
+```
+rm ~/anaconda3/envs/droneController3D/lib/libstdc++*
+```
+
 ## How to test  
 
 [This video](https://www.youtube.com/watch?v=6sRNNMlCmjM) shows how it works  
