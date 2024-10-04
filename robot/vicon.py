@@ -14,23 +14,16 @@ logging.basicConfig(
 class ViconClient(QObject):
     pose_signal = pyqtSignal(dict)
     
-    def __init__(obj_name:str, self, parent: QObject = None) -> None:
-        self.ip_address = "0.0.0.0"
-        self.tracker = tools.ObjectTracker(self.ip_address)
+    def __init__(self, obj_name:str, ip_address:str, parent: QObject = None) -> None:
+        self.ip_address = ip_address
         self.obj_name = obj_name
         super().__init__(parent) 
-        if self.tracker.is_connected:
-            logging.info('vicon connected ...')
-        else:
-            logging.error('vicon cannot be connected')
+        self.tracker = tools.ObjectTracker(self.ip_address)
         self.connection_ressolve()
-        
-
-
-
+   
     def pose_callback(self):
-       
         if not self.tracker.is_connected:
+            logging.info('vicon is not connected ...')
             self.connection_ressolve()
             return
 
@@ -38,25 +31,28 @@ class ViconClient(QObject):
         if position != []:
             xyz_position = position[0][2:5] # get x,y,z only
             orientation = position[0][7] # get rotation around z axis
+            xyz_position[0], xyz_position[1] = xyz_position[1], xyz_position[0]
             data = {"position": np.array(xyz_position) / 1000.0, "orientation" : orientation}
+            logging.debug(f'{self.obj_name} position = {data}')
             self.pose_signal.emit(data)
-            print(data)
+    
+    def isConnected(self):
+        return self.tracker.is_connected
+            
 
     def connection_ressolve(self):
         while not self.tracker.is_connected:
             logging.warning('waiting for vicon to connect ...[!]')
-            self.tracker.connect(self.IP_ADDR)
+            self.tracker.connect(self.ip_address)
             time.sleep(1)
-        logging.info('vicon connection ressolved ...')
-        self.vicon_timer = QTimer()
-        self.vicon_timer.timeout.connect(self.pose_callback)
-        self.vicon_timer.start(10) # 1ms -> 100 Hz  
+        logging.info('vicon connection established ...')
+
 
 if __name__ == "__main__":
     import sys 
     from PyQt5.QtWidgets import QApplication
     app = QApplication(sys.argv)
-    vicon = ViconClient("djimini")
+    vicon = ViconClient(obj_name="djimini", ip_address="192.168.10.2")
     while True:
         try:
             time.sleep(1)

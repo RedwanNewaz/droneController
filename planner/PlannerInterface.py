@@ -14,6 +14,7 @@ class PlannerInterface(QObject):
         self.ax = self.fig.add_subplot()
         self.canvas = FigureCanvasQTAgg(self.fig)
         self.cid = self.canvas.mpl_connect('button_press_event', self.onclick)
+        self.__start  = None
         
         self.mainWindow = mainWindow
         self.mainWindow.plan_view.addWidget(self.canvas)
@@ -23,7 +24,7 @@ class PlannerInterface(QObject):
         self.startRadio = self.mainWindow.startPos
         self.goalRadio = self.mainWindow.goalPos
         self.mainWindow.planButton.clicked.connect(self.plan)
-        self.mainWindow.updateButton.clicked.connect(self.updateButton)
+        # self.mainWindow.updateButton.clicked.connect(self.updateButton)
 
         self.pathPlot = None
     
@@ -40,7 +41,12 @@ class PlannerInterface(QObject):
         # ====Search Path with RRT====
 
         self.obstacle_list = config['obstacle_list']
-        self.boundary = config['boundary']
+        boundary = np.array(config['boundary'])
+        self._shape = boundary 
+        self.boundary = boundary - (boundary / 2)
+        self.boundary[0] = -self.boundary[1]
+        self.boundary[2] = -self.boundary[3]
+        self.origin = np.array([self.boundary[0], self.boundary[2]])
         self.dt = config['dt']
         self.ax.set_xlim(self.boundary[:2])
         self.ax.set_ylim(self.boundary[2:])
@@ -57,27 +63,34 @@ class PlannerInterface(QObject):
         offsets[index] = [new_x, new_y]
         self.scatter.set_offsets(offsets)
         self.canvas.draw_idle()
+    
+    
     @pyqtSlot(str)
     def updateRobot(self, position):
         # print('received ', position)
         coord = list(map(float, position.split(",")))
         self.update_point(0, coord[0], coord[1])
+        self.__start = np.array([coord[0], coord[1]])
 
     def updateButton(self):
-        if self.pathPlot:
-            path = np.column_stack((self.pathPlot.get_xdata(), self.pathPlot.get_ydata()))[::-1]
+        path = np.column_stack((self.pathPlot.get_xdata(), self.pathPlot.get_ydata()))[::-1]
+        self.trajExec = TrajectoryInterface(path, dt=self.dt)
+        self.trajExec.start()
+        # if self.pathPlot:
+        #     path = np.column_stack((self.pathPlot.get_xdata(), self.pathPlot.get_ydata()))[::-1]
 
-            self.trajExec = TrajectoryInterface(path, dt=self.dt)
-            self.trajExec.setPoint.connect(self.updateRobot)
-            self.trajExec.start()
+        #     self.trajExec = TrajectoryInterface(path, dt=self.dt)
+        #     # self.trajExec.setPoint.connect(self.updateRobot)
+        #     self.trajExec.start()
+
 
 
     def plan(self):
         # print('plan with', self.startTxt.toPlainText(), self.goalTxt.toPlainText())
         offsets = self.scatter.get_offsets()
-        start, goal = offsets
+        # start, goal = offsets
         print(self.scatter.get_offsets())
-        self.demo(start, goal)
+        self.demo(self.__start, self.__goal)
 
     def draw_obstacles(self, obstacle_list):
         for obstacle in obstacle_list:
@@ -103,9 +116,12 @@ class PlannerInterface(QObject):
             else:
                 self.goalTxt.setPlainText(msg)
                 self.update_point(1, event.xdata, event.ydata)
-
-
+                self.__goal = np.array([event.xdata, event.ydata])
+    
     def demo(self, start, goal):
+
+        if start is None:
+            return
 
         # config collision checker
         collisionManager = CollisionChecker(self.obstacle_list, self.boundary)
@@ -113,11 +129,11 @@ class PlannerInterface(QObject):
         rrt_star = RRTStar(
             start=start,
             goal=goal,
-            rand_area=[-2, 15],
+            rand_area=[-7, 7],
             obstacle_list=self.obstacle_list,
             expand_dis=1,
             check_collision=collisionManager.check_collision,
-            robot_radius=0.6)
+            robot_radius=0.25)
         path = rrt_star.planning(animation=False)
 
         if path is None:
@@ -133,4 +149,6 @@ class PlannerInterface(QObject):
             # self.ax.grid(True)
             print("found path!!: ")
             self.canvas.draw_idle()
+
+
 

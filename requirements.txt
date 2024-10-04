@@ -10,3 +10,4 @@ pyvistaqt
 meshio
 scipy
 pyvicon_datastream
+pyserial

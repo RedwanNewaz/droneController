@@ -9,7 +9,7 @@ import pyvista as pv
 from pyvistaqt import QtInteractor
 import os
 import numpy as np
-from PyQt5.QtCore import QTimer, QObject, pyqtSignal
+from PyQt5.QtCore import QTimer, QObject, pyqtSignal, pyqtSlot
 from .angle import angle_mod
 
 VIEWER_SCALE = 10.0 # meter to cm
@@ -23,11 +23,13 @@ class Quadrotor(QObject):
         self.viewer_points = None
         self.scale = VIEWER_SCALE
         # Create the grid world
-        dx, dy, dz = 0.1, 0.1, 0.0  # 10 cm spacing
+        dx, dy, dz = 0.1, 0.1, 0.1  # 10 cm spacing
 
         self.grid = pv.ImageData()
         self.grid.dimensions = np.array(grid_shape) + 1  # Add 1 to create cells
-        self.grid.origin = (0, 0, 0)
+       
+        self.grid.origin = (-grid_shape[0] / 20, -grid_shape[1] / 20, 0)
+     
         self.grid.spacing = (dx, dy, dz)
 
         # Add the grid to the plotter
@@ -62,6 +64,7 @@ class Quadrotor(QObject):
         """Update the plotter."""
         self.plotter.update()
 
+
     def onTimeout(self):
         if self._trajIndex < len(self._traj):
             position = self._traj[self._trajIndex]
@@ -79,6 +82,8 @@ class Quadrotor(QObject):
             self._trajIndex = 0
         self._trajIndex += 1
         self.update()
+
+    @pyqtSlot()
     def sendTrajectory(self):
         """excute a trajectory and update the plotter."""
         self._trajIndex = 0
@@ -90,9 +95,9 @@ class Quadrotor(QObject):
 
 
         # Add the trajectory points to the plotter
-        self.viewer_points = self.plotter.add_points(trajectory, render_points_as_spheres=True, point_size=5, color='grey')
+        self.viewer_points = self.plotter.add_points(trajectory, render_points_as_spheres=True, point_size=10, color='grey')
         print(self._traj.shape)
-        self._timer.timeout.connect(self.onTimeout)
-        self._timer.start(int(self._dt * 1000))
+        # self._timer.timeout.connect(self.onTimeout)
+        # self._timer.start(int(self._dt * 1000))
 
 
