@@ -94,14 +94,17 @@ class MainWindow(QMainWindow):
 
         self.num_points = 760
         self.traj_dt = 200
+        self._robot = None
 
-        self.__isSim = False
+        self.updateExpType()
 
-        if self.__isSim:
-            self._robot = SimulatorInterface(self)
-        else:
-            self._robot = RobotInterface(self)
-        self._robot.start()
+       
+
+        # updateExpType
+        # self.radioSim.toggled.connect(self.updateExpType)
+        # self.radioPhysical.toggled.connect(self.updateExpType)
+
+        
 
         self._controller = ControllerInterface(self, self._robot)
         self.quad = None
@@ -183,6 +186,19 @@ class MainWindow(QMainWindow):
         self.quad.sendTrajectory()
 
 
+    def updateExpType(self):
+        print("exp type changed")
+        self.__isSim = self.radioSim.isChecked()
+
+        # if self._robot:
+        #     self._robot.quit()
+
+        if self.__isSim:
+            self._robot = SimulatorInterface(self)
+        else:
+            self._robot = RobotInterface(self)
+       
+        self._robot.start()
     
 
     def onTimeout(self):
