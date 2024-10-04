@@ -183,7 +183,7 @@ def generate_trajectory(path, dt):
     result = []
     t = 0
     for i in range(1, N):
-        T = 2
+        T = 4
         traj = TrajectoryGenerator(path[i - 1], path[i], T, vel[i - 1], vel[i] * dt, acc[i - 1], 0.5 * acc[i] * (dt ** 2) )
         # traj = TrajectoryGenerator(path[i - 1], path[i], T, vel[i - 1], vel[i], acc[i - 1], acc[i])
         traj.solve()

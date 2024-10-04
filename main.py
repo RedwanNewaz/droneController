@@ -55,9 +55,12 @@ class MainWindow(QMainWindow):
      
 
     def updateCoord(self, x, y, z):
-        self.coord[0] = max(0, x)
-        self.coord[1] = max(0, y)
-        self.coord[2] = max(0, z)
+        # self.coord[0] = max(0, x)
+        # self.coord[1] = max(0, y)
+        # self.coord[2] = max(0, z)
+        self.coord[0] = x
+        self.coord[1] = y
+        self.coord[2] = z
         self.lblLongValue.setText(f"{self.coord[0]:.4f}")
         self.lblLatValue.setText(f"{self.coord[1]:.4f}")
         self.lblAltValue.setText(f"{self.coord[2]:.4f}")
