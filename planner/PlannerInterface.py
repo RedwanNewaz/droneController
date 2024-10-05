@@ -1,13 +1,15 @@
 import numpy as np
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
-from .RRTStar import RRTStar
-from .CollisionChecker import CollisionChecker
-from .PathSmoothing import path_smoothing
-from PyQt5.QtCore import QTimer, QObject, pyqtSignal, pyqtSlot
+from planner.RRT.RRTStar import RRTStar
+from planner.RRT.CollisionChecker import CollisionChecker
+from planner.RRT.PathSmoothing import path_smoothing
+from PyQt5.QtCore import QObject, pyqtSlot
 from trajectory import TrajectoryInterface
-import yaml
+from planner.VisibilityRoadmap import getRoadmap
+
+
 class PlannerInterface(QObject):
     def __init__(self, mainWindow):
         self.fig = Figure()
@@ -27,6 +29,7 @@ class PlannerInterface(QObject):
         # self.mainWindow.updateButton.clicked.connect(self.updateButton)
 
         self.pathPlot = None
+        self.__roadmap = None
     
         colors = ['red', 'green']
         self.scatter = self.ax.scatter([-2, -2], [-2, -2], c=colors)
@@ -123,32 +126,46 @@ class PlannerInterface(QObject):
         if start is None:
             return
 
-        # config collision checker
-        collisionManager = CollisionChecker(self.obstacle_list, self.boundary)
-        # Set Initial parameters
-        rrt_star = RRTStar(
-            start=start,
-            goal=goal,
-            rand_area=[-7, 7],
-            obstacle_list=self.obstacle_list,
-            expand_dis=1,
-            check_collision=collisionManager.check_collision,
-            robot_radius=0.25)
-        path = rrt_star.planning(animation=False)
+        if self.__roadmap is None:
+            self.__roadmap = getRoadmap(self.obstacle_list, 0.75)
 
-        if path is None:
-            print("Cannot find path")
-        else:
-            while len(self.ax.lines):
-                for line in self.ax.lines:
-                    line.remove()
-            self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'g--')
-            path = path_smoothing(path, rrt_star.max_iter, self.obstacle_list)
-            self.pathPlot, = self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'r--')
+        rx, ry = self.__roadmap.plan(start, goal)
+        while len(self.ax.lines):
+            for line in self.ax.lines:
+                line.remove()
+        self.pathPlot, = self.ax.plot([x for x in reversed(rx)], [y for y in reversed(ry)], 'r--')
 
-            # self.ax.grid(True)
-            print("found path!!: ")
-            self.canvas.draw_idle()
+        # self.ax.grid(True)
+        # print("found path!!: ")
+        self.canvas.draw_idle()
+
+
+        # # config collision checker
+        # collisionManager = CollisionChecker(self.obstacle_list, self.boundary)
+        # # Set Initial parameters
+        # rrt_star = RRTStar(
+        #     start=start,
+        #     goal=goal,
+        #     rand_area=[-7, 7],
+        #     obstacle_list=self.obstacle_list,
+        #     expand_dis=1,
+        #     check_collision=collisionManager.check_collision,
+        #     robot_radius=0.25)
+        # path = rrt_star.planning(animation=False)
+        #
+        # if path is None:
+        #     print("Cannot find path")
+        # else:
+        #     while len(self.ax.lines):
+        #         for line in self.ax.lines:
+        #             line.remove()
+        #     self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'g--')
+        #     path = path_smoothing(path, rrt_star.max_iter, self.obstacle_list)
+        #     self.pathPlot, = self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'r--')
+        #
+        #     # self.ax.grid(True)
+        #     print("found path!!: ")
+        #     self.canvas.draw_idle()
 
 
 

@@ -6,6 +6,7 @@ class TrajectoryInterface(QObject):
     setPoint = pyqtSignal(str)
     def __init__(self, path, dt, parent=None):
         self._path = np.column_stack((path, np.ones(len(path))))
+        self._path = self.interpolate(self._path)
         self._dt = int(1000 * dt) #msec
         self._timer = QTimer()
         self._trajIndex = 0
@@ -16,8 +17,9 @@ class TrajectoryInterface(QObject):
         p1 = np.array(p1)
         p2 = np.array(p2)
         dist = np.linalg.norm(p2 - p1)
-        V = 0.0001 # m/s
-        V = 0.00008 # m/s
+        # V = 0.0001 # m/s
+        # V = 0.00008 # m/s
+        V = 0.25
         num_points = int(dist / V)
         # Generate evenly spaced values from 0 to 1
         t = np.linspace(0, 1, num_points)
@@ -25,7 +27,7 @@ class TrajectoryInterface(QObject):
         # Interpolate between p1 and p2
         interpolated_points = p1[np.newaxis, :] * (1 - t)[:, np.newaxis] + p2[np.newaxis, :] * t[:, np.newaxis]
         
-        return interpolated_points.tolist()
+        return interpolated_points
     
     def interpolate(self, path):
         traj = []
