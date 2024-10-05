@@ -1,20 +1,11 @@
 #!/home/airlab/anaconda3/envs/droneController3D/bin/python
-from dronekit import connect, VehicleMode
-from pymavlink import mavutil
-
 from PyQt5.QtWidgets import QApplication, QTableWidgetItem, QMainWindow
 import sys
 from PyQt5 import uic
 from PyQt5.QtCore import QTimer
-from threading import Thread
-import PyQt5
 from EKF import  ekf_estimation
 from viewer.Quadrotor import Quadrotor
-
-import configparser
-from enum import Enum
-from collections import defaultdict
-import time
+import argparse
 
 from simulator import SimulatorInterface
 from controller import  ControllerInterface
@@ -65,26 +56,9 @@ def calculate_derivaties(waypoints):
 
     return np.array(velocities)
 
-def generate_spiral_eight(num_points, x_scale=3.5, y_scale=2.0, t0=0.0):
-    """
-    Generates coordinates for points on a circle.
-
-    Args:
-        num_points (int): Number of points on the circle.
-        x_scale (float, optional): Scaling factor for x-coordinate. Defaults to 2.0.
-        y_scale (float, optional): Scaling factor for y-coordinate. Defaults to 2.0.
-        t0 (float, optional): Offset value for the angle. Defaults to 0.0.
-
-    Returns:
-        tuple: A tuple containing two NumPy arrays (x_coordinates, y_coordinates).
-    """
-    theta = np.linspace(t0, t0 + 2*np.pi, num_points)  # Create angles for all points
-    x = x_scale * np.cos(theta) * np.sin(theta)
-    y = y_scale * np.sin(theta)
-    return x, y
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, args):
 
         super().__init__()
         uic.loadUi('window_v1.ui', self)
@@ -95,7 +69,12 @@ class MainWindow(QMainWindow):
         self.num_points = 760
         self.traj_dt = 200
         self._robot = None
-        # self.radioSim.setChecked(True)
+
+        if args.sim:
+            self.radioSim.setChecked(True)
+            self.radioPhysical.setEnabled(False)
+        else:
+            self.radioSim.setEnabled(False)
 
         self.updateExpType()
 
@@ -161,27 +140,7 @@ class MainWindow(QMainWindow):
             self.quad.add_cube(obstacle)
         self.quad.update()
 
-    # def onTimeout(self):
-    #     if self._trajIndex < len(self._traj):
-    #         position = self._traj[self._trajIndex]
-    #         vel = position - self.coord
-    #         self._controller.publish_cmd_vel(vel[1], vel[0], -vel[2])
-    #         # self._controller.publish_cmd_vel(-vel[1], -vel[0],0)
-    #     elif self._trajIndex - 10 < len(self._traj):
-    #         self._controller.publish_cmd_vel(0, 0, 0)
-    #     else:
-    #         self._timer.stop()
-    #     self._trajIndex += 1
-    
-    # def sendTrajectory(self):
-    #     """excute a trajectory and update the plotter."""
-    #     self._trajIndex = 0
-    #     self._traj = np.loadtxt('trajs/traj.csv', delimiter=',') 
-    #     self._timer = QTimer()
-    #     self._timer.timeout.connect(self.onTimeout)
-    #     self._timer.start(int(self._dt * 1000))
 
-    
     def planUpdate(self):
         self.plannerInterface.updateButton()
         self.quad.sendTrajectory()
@@ -190,9 +149,6 @@ class MainWindow(QMainWindow):
     def updateExpType(self):
         print("exp type changed")
         self.__isSim = self.radioSim.isChecked()
-
-        # if self._robot:
-        #     self._robot.quit()
 
         if self.__isSim:
             self._robot = SimulatorInterface(self)
@@ -286,7 +242,11 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--sim', action='store_true', help='simulation')
+    args = parser.parse_args()
+
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = MainWindow(args)
     window.show()
     sys.exit(app.exec())
