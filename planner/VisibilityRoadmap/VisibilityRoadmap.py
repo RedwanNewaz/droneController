@@ -23,42 +23,49 @@ class VisibilityRoadMap:
         self.do_plot = do_plot
         self.obstacles = obstacles
 
-
     def plan(self, start, goal):
         start_x, start_y = start[0], start[1]
         goal_x, goal_y = goal[0], goal[1]
-        return self.__planning(start_x,start_y, goal_x, goal_y, self.obstacles)
+        return self.__planning(start_x, start_y, goal_x, goal_y, self.obstacles)
+
     def __planning(self, start_x, start_y, goal_x, goal_y, obstacles):
-
-        nodes = self.generate_visibility_nodes(start_x, start_y,
-                                               goal_x, goal_y, obstacles)
-
+        nodes = self.generate_visibility_nodes(start_x, start_y, goal_x, goal_y, obstacles)
         road_map_info = self.generate_road_map_info(nodes, obstacles)
 
         if self.do_plot:
             self.plot_road_map(nodes, road_map_info)
             plt.pause(1.0)
 
+        # Find nearest neighbors for start and goal
+        start_node = self.find_nearest_node(nodes, start_x, start_y)
+        goal_node = self.find_nearest_node(nodes, goal_x, goal_y)
+
         rx, ry = DijkstraSearch(show_animation).search(
-            start_x, start_y,
-            goal_x, goal_y,
+            start_node.x, start_node.y,
+            goal_node.x, goal_node.y,
             [node.x for node in nodes],
             [node.y for node in nodes],
             road_map_info
         )
 
+        # Add start and goal to the path
+        rx.insert(0, start_x)
+        ry.insert(0, start_y)
+        rx.append(goal_x)
+        ry.append(goal_y)
+
         return rx, ry
 
-    def generate_visibility_nodes(self, start_x, start_y, goal_x, goal_y,
-                                  obstacles):
+    def find_nearest_node(self, nodes, x, y):
+        distances = [np.hypot(node.x - x, node.y - y) for node in nodes]
+        nearest_index = np.argmin(distances)
+        return nodes[nearest_index]
 
-        # add start and goal as nodes
-        nodes = [DijkstraSearch.Node(start_x, start_y),
-                 DijkstraSearch.Node(goal_x, goal_y, 0, None)]
+    def generate_visibility_nodes(self, start_x, start_y, goal_x, goal_y, obstacles):
+        nodes = []
 
-        # add vertexes in configuration space as nodes
+        # Add vertexes in configuration space as nodes
         for obstacle in obstacles:
-
             cvx_list, cvy_list = self.calc_vertexes_in_configuration_space(
                 obstacle.x_list, obstacle.y_list)
 
