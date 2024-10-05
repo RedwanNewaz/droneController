@@ -3,7 +3,6 @@ from PyQt5.QtWidgets import QApplication, QTableWidgetItem, QMainWindow
 import sys
 from PyQt5 import uic
 from PyQt5.QtCore import QTimer
-from EKF import  ekf_estimation
 from viewer.Quadrotor import Quadrotor
 import argparse
 
@@ -116,6 +115,8 @@ class MainWindow(QMainWindow):
         if self.quad:
             position = self.coord / self.quad.scale
             self.quad.actor.position = position.tolist()
+        if self._robot.state.name == "HOVER":
+            self._controller.calib(self.coord.tolist())
 
 
     def on_combobox_changed(self, value):

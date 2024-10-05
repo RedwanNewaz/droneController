@@ -4,6 +4,7 @@ from threading import Thread
 import time
 from PyQt5.QtCore import QTimer, QObject, pyqtSlot
 import logging
+from .Calibration import Calibration
 from enum import Enum
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -15,6 +16,7 @@ class ControllerInterface(QObject):
     def __init__(self, mainWindow, platform):
         self.mainWindow = mainWindow
         self.platform = platform
+        self.calib = Calibration()
         
         self.default_cmd_vel = 0.4
         self.default_dt = 0.05
@@ -67,6 +69,7 @@ class ControllerInterface(QObject):
             return
         @self.vehicle_validation
         def west_wrapped():
+            self.calib.updateAction(3)
             self.send_ned_velocity(0, self.default_cmd_vel, 0, 1)
             # self.send_ned_velocity(0, 0, 0, 1)
     @pyqtSlot()
@@ -76,6 +79,7 @@ class ControllerInterface(QObject):
             return
         @self.vehicle_validation
         def east_wrapped():
+            self.calib.updateAction(2)
             self.send_ned_velocity(0, -self.default_cmd_vel, 0, 1)
             # self.send_ned_velocity(0, 0, 0, 1)
     
@@ -86,8 +90,10 @@ class ControllerInterface(QObject):
             return
         @self.vehicle_validation
         def north_wrapped():
+            self.calib.updateAction(0)
             self.send_ned_velocity(-self.default_cmd_vel, 0, 0, 1)
             # self.send_ned_velocity(0, 0, 0, 1)
+            
     @pyqtSlot()
     def south_click(self):
         if self.platform.state.name != "HOVER":
@@ -95,8 +101,10 @@ class ControllerInterface(QObject):
             return
         @self.vehicle_validation
         def south_wrapped():
+            self.calib.updateAction(1)
             self.send_ned_velocity(self.default_cmd_vel, 0, 0, 1)
             # self.send_ned_velocity(0, 0, 0, 1)
+            
 
     @pyqtSlot()
     def rtl_click(self):
@@ -117,7 +125,9 @@ class ControllerInterface(QObject):
         def up_wrapped():
             alt = self.platform.vehicle.location.global_relative_frame.alt
             # if alt < 3:
+            self.calib.updateAction(4)
             self.send_ned_velocity(0, 0, 0.5 * self.default_cmd_vel, 1)
+            
                 # self.send_ned_velocity(0, 0, 0, 1)
 
     @pyqtSlot()
@@ -129,6 +139,7 @@ class ControllerInterface(QObject):
         def down_wrapped():
             alt = self.platform.vehicle.location.global_relative_frame.alt
             # if alt > 0.5:
+            self.calib.updateAction(5)
             self.send_ned_velocity(0, 0, -0.5 * self.default_cmd_vel, 1)
                 # self.send_ned_velocity(0, 0, 0, 1)
         
