@@ -95,6 +95,7 @@ class MainWindow(QMainWindow):
         self.num_points = 760
         self.traj_dt = 200
         self._robot = None
+        # self.radioSim.setChecked(True)
 
         self.updateExpType()
 

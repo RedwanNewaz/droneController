@@ -183,7 +183,10 @@ def generate_trajectory(path, dt):
     result = []
     t = 0
     for i in range(1, N):
-        T = 2
+
+        point_dist = np.linalg.norm(path[i - 1] - path[i])
+        print('point dist ', point_dist)
+        T = max(2.25 * point_dist, dt)
         traj = TrajectoryGenerator(path[i - 1], path[i], T, vel[i - 1], vel[i] * dt, acc[i - 1], 0.5 * acc[i] * (dt ** 2) )
         # traj = TrajectoryGenerator(path[i - 1], path[i], T, vel[i - 1], vel[i], acc[i - 1], acc[i])
         traj.solve()
@@ -196,8 +199,8 @@ def generate_trajectory(path, dt):
             path[i - 1] = rpos
             vel[i - 1] = list(map(lambda x: calculate_velocity(x, t)[0], coeff))
             acc[i - 1] = list(map(lambda x: calculate_acceleration(x, t)[0], coeff))
-            if dist < 0.345:
-                break
+            # if dist < 0.345:
+            #     break
             t += dt
     result.append(path[-1].tolist())
 
