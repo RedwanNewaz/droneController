@@ -23,6 +23,7 @@ class DijkstraSearch:
             self.cost = cost
             self.parent = parent
             self.edge_ids = edge_ids
+            self.goalFound = False
 
         def __str__(self):
             return str(self.x) + "," + str(self.y) + "," + str(
@@ -50,12 +51,13 @@ class DijkstraSearch:
 
         open_set, close_set = dict(), dict()
         open_set[self.find_id(node_x, node_y, start_node)] = start_node
-
+        self.goalFound = False
         while True:
             if self.has_node_in_set(close_set, goal_node):
                 print("goal is found!")
                 goal_node.parent = current_node.parent
                 goal_node.cost = current_node.cost
+                self.goalFound = True
                 break
             elif not open_set:
                 print("Cannot find path")

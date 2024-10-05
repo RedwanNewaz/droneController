@@ -12,16 +12,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .geometry import Geometry
 from .dijkstra_search import DijkstraSearch
-
+from .CollisionChecker import CollisionChecker
 show_animation = False
 
 
 class VisibilityRoadMap:
 
-    def __init__(self, expand_distance, obstacles, do_plot=False):
+    def __init__(self, expand_distance, obstacles, is_edge_valid, do_plot=False):
         self.expand_distance = expand_distance
         self.do_plot = do_plot
         self.obstacles = obstacles
+        self.is_edge_valid = is_edge_valid
 
     def plan(self, start, goal):
         start_x, start_y = start[0], start[1]
@@ -39,8 +40,8 @@ class VisibilityRoadMap:
         # Find nearest neighbors for start and goal
         start_node = self.find_nearest_node(nodes, start_x, start_y)
         goal_node = self.find_nearest_node(nodes, goal_x, goal_y)
-
-        rx, ry = DijkstraSearch(show_animation).search(
+        searchAlg = DijkstraSearch(show_animation)
+        rx, ry = searchAlg.search(
             start_node.x, start_node.y,
             goal_node.x, goal_node.y,
             [node.x for node in nodes],
@@ -54,7 +55,7 @@ class VisibilityRoadMap:
         rx.append(goal_x)
         ry.append(goal_y)
 
-        return rx, ry
+        return rx, ry, searchAlg.goalFound
 
     def find_nearest_node(self, nodes, x, y):
         distances = [np.hypot(node.x - x, node.y - y) for node in nodes]
@@ -119,19 +120,19 @@ class VisibilityRoadMap:
 
         return road_map_info_list
 
-    @staticmethod
-    def is_edge_valid(target_node, node, obstacle):
-
-        for i in range(len(obstacle.x_list) - 1):
-            p1 = Geometry.Point(target_node.x, target_node.y)
-            p2 = Geometry.Point(node.x, node.y)
-            p3 = Geometry.Point(obstacle.x_list[i], obstacle.y_list[i])
-            p4 = Geometry.Point(obstacle.x_list[i + 1], obstacle.y_list[i + 1])
-
-            if Geometry.is_seg_intersect(p1, p2, p3, p4):
-                return False
-
-        return True
+    # @staticmethod
+    # def is_edge_valid(target_node, node, obstacle):
+    #
+    #     for i in range(len(obstacle.x_list) - 1):
+    #         p1 = Geometry.Point(target_node.x, target_node.y)
+    #         p2 = Geometry.Point(node.x, node.y)
+    #         p3 = Geometry.Point(obstacle.x_list[i], obstacle.y_list[i])
+    #         p4 = Geometry.Point(obstacle.x_list[i + 1], obstacle.y_list[i + 1])
+    #
+    #         if Geometry.is_seg_intersect(p1, p2, p3, p4):
+    #             return False
+    #
+    #     return True
 
     def calc_offset_xy(self, px, py, x, y, nx, ny):
         p_vec = math.atan2(y - py, x - px)
@@ -187,7 +188,9 @@ class ObstaclePolygon:
         plt.plot(self.x_list, self.y_list, "-k")
 
 
-def getRoadmap(obstacle_list, robot_radius):
+def getRoadmap(obstacle_list, boundary, robot_radius):
+
+    cc = CollisionChecker(obstacle_list, boundary, robot_radius)
     obs_polygons = []
     for obstacle in obstacle_list:
         center = np.array(obstacle[:2])
@@ -206,51 +209,6 @@ def getRoadmap(obstacle_list, robot_radius):
             points[:, 1].tolist(),
         )
         obs_polygons.append(obs)
-    roadmap = VisibilityRoadMap(robot_radius, obs_polygons, do_plot=show_animation)
+    roadmap = VisibilityRoadMap(robot_radius, obs_polygons, cc.is_edge_valid,  do_plot=show_animation)
     return roadmap
 
-
-
-def main():
-    print(__file__ + " start!!")
-
-    # start and goal position
-    sx, sy = 10.0, 10.0  # [m]
-    gx, gy = 50.0, 50.0  # [m]
-
-    expand_distance = 5.0  # [m]
-
-    obstacles = [
-        ObstaclePolygon(
-            [20.0, 30.0, 15.0],
-            [20.0, 20.0, 30.0],
-        ),
-        ObstaclePolygon(
-            [40.0, 45.0, 50.0, 40.0],
-            [50.0, 40.0, 20.0, 40.0],
-        ),
-        ObstaclePolygon(
-            [20.0, 30.0, 30.0, 20.0],
-            [40.0, 45.0, 60.0, 50.0],
-        )
-    ]
-
-    if show_animation:  # pragma: no cover
-        plt.plot(sx, sy, "or")
-        plt.plot(gx, gy, "ob")
-        for ob in obstacles:
-            ob.plot()
-        plt.axis("equal")
-        plt.pause(1.0)
-
-    rx, ry = VisibilityRoadMap(expand_distance, do_plot=show_animation)\
-        .planning(sx, sy, gx, gy, obstacles)
-
-    if show_animation:  # pragma: no cover
-        plt.plot(rx, ry, "-r")
-        plt.pause(0.1)
-        plt.show()
-
-
-if __name__ == '__main__':
-    main()

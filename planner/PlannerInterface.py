@@ -127,9 +127,13 @@ class PlannerInterface(QObject):
             return
 
         if self.__roadmap is None:
-            self.__roadmap = getRoadmap(self.obstacle_list, 0.75)
+            self.__roadmap = getRoadmap(self.obstacle_list, self.boundary,0.5)
 
-        rx, ry = self.__roadmap.plan(start, goal)
+        rx, ry, found = self.__roadmap.plan(start, goal)
+
+        if not found:
+            return
+
         while len(self.ax.lines):
             for line in self.ax.lines:
                 line.remove()
