@@ -1,1 +1,2 @@
 from .TrajectoryInterface import TrajectoryInterface
+from .TrajectoryFollower import TrajectoryFollower
