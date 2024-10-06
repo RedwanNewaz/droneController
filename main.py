@@ -8,7 +8,7 @@ import argparse
 
 from simulator import SimulatorInterface
 from controller import  ControllerInterface
-from robot import RobotInterface, ekf_estimation
+from robot import RobotInterface, ekf_estimation, EKF4D
 import numpy as np
 import os
 import logging
@@ -169,40 +169,34 @@ class MainWindow(QMainWindow):
 
         self.traj_index += 1
         if self.traj_index < len(self.traj):
-            # target = self.traj[self.traj_index][1:]
-            # vel = target - self.coord[:3]
-            # vx, vy, vz = vel
 
             target = self.traj[self.traj_index]
             target_vel = self.traj_vel[self.traj_index]
-            target_acc = self.traj_acc[self.traj_index]
             dt = self._dt * self.traj_dt / 1000.0
 
-            setpoint = np.vstack((target, target_vel, target_acc)).flatten()
-            current = np.squeeze(self.xEst)
+
+            altitude = 1.0
+            headingAngle = 0.0
+            setpoint = np.array([target[0], target[1], altitude, headingAngle, target_vel[0], target_vel[1], 0.0, 0.0])
+            # logging.info(f"setpoint = {setpoint}")
+            current = np.squeeze(self.filter.xEst)
+            # logging.info(f"current = {current}")
             error = setpoint - current
+
             K = np.array([
-                [1, 0, dt, 0, dt * dt / 2.0, 0],
-                [0, 1, 0, dt, 0, dt * dt / 2.0]
+                [1.0, 0.0, 0.0, 0.0, dt, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0, 0.0, dt, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, dt, 0.0],
+                [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, dt]
             ])
-            vx, vy = K @ error
-
-            logging.debug(f"[Traj] vx = {vx:.3f}, vy = {vy:.3f} ")
-
-        
+            u = np.squeeze(K @ error)
+            z = np.array([self.coord[0], self.coord[1], self.coord[2], 0.0]).reshape((4, 1))
+            logging.info(f'u = {u}')
             if self.__isSim:
-                self._controller.publish_cmd_vel(vy, vx, 0.0)
+                self._controller.publish_cmd_vel(u[1], u[0], 0.0)
             else:
-                self._controller.publish_cmd_vel(-vx, -vy, 0.0)
-
-            # update ekf 
-            z = np.array([[self.coord[0]], [self.coord[1]]])
-            u = np.array([[vx], [vy]])
-            #FIXME ekf_estimation 
-            self.xEst, self.PEst = ekf_estimation(self.xEst, self.PEst, z, u, dt)
-            self.VMAX = max(self.VMAX, np.sqrt(self.xEst[2, 0] ** 2 + self.xEst[3, 0] ** 2))
-            logging.debug(f"VMAX = {self.VMAX}")
-            # self.maxVelSignal.emit(self.VMAX)
+                self._controller.publish_cmd_vel(-u[0], -u[1], 0.0)
+            self.filter.update(u, z, dt)
 
 
         elif self.traj_index - 10 < len(self.traj):
@@ -216,21 +210,20 @@ class MainWindow(QMainWindow):
         """excute a trajectory and update the plotter."""
   
 
-        self.xEst = np.zeros((6, 1), dtype=np.float32)
-        self.PEst = np.eye(6, dtype=np.float32)
-        self.xEst[0, 0] = self.coord[0]
-        self.xEst[1, 0] = self.coord[1]
         self.VMAX = 0.0
+
+        xEst = np.zeros((8, 1), dtype=np.float32)
+        for i in range(3):
+            xEst[i, 0] = self.coord[i]
+        self.filter = EKF4D(xEst)
+
 
 
      
         self.traj = np.loadtxt('trajs/traj.csv', delimiter=',')[:, :2] 
-        # xx, yy = generate_spiral_eight(num_points=500)
-        # self.traj = np.column_stack((xx, yy))
-        # compute trajectory 
+        # compute trajectory
         self.traj_vel = calculate_derivaties(self.traj)
-        self.traj_acc = calculate_derivaties(self.traj_vel)
-        logging.info(f'sending trajectory points = {self.traj.shape}, vel = {self.traj_vel.shape}, acc = {self.traj_acc.shape}')
+        logging.info(f'sending trajectory points = {self.traj.shape}, vel = {self.traj_vel.shape}')
 
         self.quad.sendTrajectory()
 

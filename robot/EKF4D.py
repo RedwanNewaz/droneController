@@ -51,7 +51,7 @@ class QuadrotorKinematics:
         self.position += delta_p
 
     def get_position(self):
-        return self.position
+        return np.squeeze(self.position)
 
     @staticmethod
     def rotation_matrix_to_euler_angles(R):
@@ -91,7 +91,7 @@ class QuadrotorKinematics:
 
 class EKF4D:
     def __init__(self, xEst):
-        self.xEst = xEst
+        self.xEst = xEst.copy()
         self.PEst = np.eye(8)
 
     @staticmethod
@@ -104,14 +104,14 @@ class EKF4D:
         :return: predicted state (x, y, z, theta, vx, vy, vz, w)
         '''
         model = QuadrotorKinematics(x[:3, 0], x[3, 0])
-        vel = x[3:, 0] + u
+        vel = x[4:, 0] + u
         model.predict_motion(vel[0], vel[1], vel[2], vel[3], DT)
         position = model.get_position()
         yaw = model.get_orientation()
-        newstate = x.copy()
+        newstate = np.zeros((8, 1))
         newstate[:3, 0] = position
         newstate[3, 0] = yaw
-        newstate[3:, 0] = vel
+        newstate[4:, 0] = vel
         return newstate
 
     @staticmethod
@@ -149,9 +149,9 @@ class EKF4D:
 
         jF = np.array([
             [1.0, 0.0, 0.0, 0.0, v[0, 0] * DT, 0.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0, 0.0, 0.0, v[1, 0] * DT, 0.0, 0.0],
-            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, v[2, 0] * DT, 0.0],
-            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, u[-1] * DT],
+            [0.0, 1.0, 0.0, 0.0, 0.0, v[1, 0] * DT, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, v[2, 0] * DT, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, u[-1] * DT],
             [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
             [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
@@ -165,12 +165,19 @@ class EKF4D:
         jF = self.jacob_f(xEst, u, DT)
         PPred = jF @ PEst @ jF.T + Q
 
+        # print('predict', xPred.shape, jF.shape, PPred.shape)
         #  Update
         jH = self.jacob_h()
         zPred = self.observation_model(xPred)
         y = z - zPred
         S = jH @ PPred @ jH.T + R
         K = PPred @ jH.T @ np.linalg.inv(S)
+        # print('Update', z.shape, y.shape, zPred.shape)
+
         xEst = xPred + K @ y
         PEst = (np.eye(len(xEst)) - K @ jH) @ PPred
         return xEst, PEst
+
+    def update(self, u, z, dt):
+        self.xEst, self.PEst = self.ekf_estimation(self.xEst, self.PEst, z, u, dt)
+        # print(f"xEst: {self.xEst.shape}")
