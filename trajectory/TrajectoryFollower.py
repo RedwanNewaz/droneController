@@ -7,13 +7,13 @@ logging.basicConfig(
     level=logging.INFO,
     datefmt='%H:%M:%S')
 class TrajectoryFollower(QObject):
-    def __init__(self, dt, traj_dt, coord, controller, expType):
+    def __init__(self, dt, traj_dt, coord, controller, bodyFrame):
         self._dt = dt
         self.traj_dt = traj_dt
 
+        self._bodyFrame = bodyFrame
         self.coord = coord # numpy shared array for coordinate
         self._controller = controller
-        self.__isSim = expType
         self.__active = False
         super().__init__()
 
@@ -63,13 +63,12 @@ class TrajectoryFollower(QObject):
                 [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, dt, 0.0],
                 [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, dt]
             ])
-            u = np.squeeze(K @ error)
-            z = np.array([self.coord[0], self.coord[1], self.coord[2], 0.0]).reshape((4, 1))
-            logging.info(f'u = {u}')
-            if self.__isSim:
-                self._controller.publish_cmd_vel(u[1], u[0], 0.0)
-            else:
-                self._controller.publish_cmd_vel(-u[0], -u[1], 0.0)
+            z = np.array([self.coord[0], self.coord[1], self.coord[2], 0.0])
+            u = K @ error
+            cmd_vel = self._bodyFrame @ u[:3]
+            logging.debug(f'u = {u}, body frame = {self._bodyFrame.flatten()} cmd_vel = {cmd_vel}')
+
+            self._controller.publish_cmd_vel(cmd_vel[0], cmd_vel[1], cmd_vel[2])
             self.filter.update(u, z, dt)
 
         else:

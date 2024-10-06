@@ -179,5 +179,6 @@ class EKF4D:
         return xEst, PEst
 
     def update(self, u, z, dt):
+        z = z.reshape((4, 1))
         self.xEst, self.PEst = self.ekf_estimation(self.xEst, self.PEst, z, u, dt)
         # print(f"xEst: {self.xEst.shape}")

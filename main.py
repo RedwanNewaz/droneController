@@ -82,6 +82,9 @@ class MainWindow(QMainWindow):
             config = yaml.load(file, Loader=yaml.SafeLoader)
         self.plannerInterface.config_env(config)
 
+        # get bodyframe rotation matrix
+        bodyFrame = np.array(config['sim_rotation_mat']) if self.__isSim else np.array(config['phy_rotation_mat'])
+
         # Create the PyVista QtInteractor
         boundary = config['boundary']
         self._dt = dt = config['dt']
@@ -104,7 +107,7 @@ class MainWindow(QMainWindow):
         self._quad.update()
 
         # configure trajectory follower
-        self._trajFollower = TrajectoryFollower(self._dt, self.traj_dt, self.coord, self._controller, self.__isSim)
+        self._trajFollower = TrajectoryFollower(self._dt, self.traj_dt, self.coord, self._controller, bodyFrame)
 
 
     def planUpdate(self):
