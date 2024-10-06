@@ -38,13 +38,21 @@ class Calibration:
         self.trace = defaultdict(list)
         self.state = CalState(0)
         self.graph = getTransitionGraph()
+        self._actionTrace = set()
 
     def updateAction(self, action:int):
         self.action = ActionType(action)
-        self.state  = self.graph[self.state ][self.action]
-        if self.state == CalState.FINISHED:
+        self._actionTrace.add(action)
+        nextstate = self.graph[self.state ][self.action]
+
+        if nextstate == CalState.FINISHED:
+            actions = [0, 2, 4] # NORTH, EAST, UP
+            if any(map(lambda x: x not in self._actionTrace, actions)):
+                return
             self.save()
-            self.state = CalState.INIT
+            nextstate = CalState.INIT
+        self.state = nextstate
+
     def __call__(self, state):
         if self.action is not None:
             self.trace[self.action.name].append(state)

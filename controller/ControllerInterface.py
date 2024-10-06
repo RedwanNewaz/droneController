@@ -37,7 +37,7 @@ class ControllerInterface(QObject):
 
 ############### MAV LINK communication ##########################################################################
     def publish_cmd_vel(self, velocity_x, velocity_y, velocity_z):
-        logging.info(f"[ControllerInterface]: vx = {velocity_x:.3f} vy = {velocity_y:.3f}")
+        logging.debug(f"[ControllerInterface]: vx = {velocity_x:.3f} vy = {velocity_y:.3f}")
 
         msg = self.platform.vehicle.message_factory.set_position_target_local_ned_encode(
             0,  # time_boot_ms (not used)
