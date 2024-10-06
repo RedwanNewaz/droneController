@@ -10,12 +10,21 @@ class TrajectoryFollower(QObject):
     def __init__(self, dt, traj_dt, coord, controller, expType):
         self._dt = dt
         self.traj_dt = traj_dt
-        self.traj_timer = QTimer()
+
         self.coord = coord # numpy shared array for coordinate
         self._controller = controller
         self.__isSim = expType
         self.__active = False
         super().__init__()
+
+    def stopAircraft(self):
+        self.traj_index += 1
+        self._controller.publish_cmd_vel(0, 0, 0)
+        MAX_ZERO = 10
+        logging.info(f"aircraft is stopping in ..{MAX_ZERO - self.traj_index}")
+        if self.traj_index >= MAX_ZERO:
+            self.traj_index = 0
+            self.traj_timer.stop()
 
     def cancel(self):
         if not self.__active:
@@ -25,6 +34,11 @@ class TrajectoryFollower(QObject):
         logging.info("trajectory timer stopped")
         self.traj_timer.stop()
         self.__active = False
+
+        self.traj_index = 0
+        self.traj_timer = QTimer()
+        self.traj_timer.timeout.connect(self.stopAircraft)
+        self.traj_timer.start(self.traj_dt)
 
     def onTimeout(self):
         self.traj_index += 1
@@ -56,8 +70,7 @@ class TrajectoryFollower(QObject):
             else:
                 self._controller.publish_cmd_vel(-u[0], -u[1], 0.0)
             self.filter.update(u, z, dt)
-        elif self.traj_index - 10 < len(self.traj):
-            self._controller.publish_cmd_vel(0, 0, 0)
+
         else:
             self.cancel()
 
@@ -74,8 +87,9 @@ class TrajectoryFollower(QObject):
 
         # start the timer
         self.__active = True
-        self.traj_timer.stop()
+
         self.traj_index = 0
+        self.traj_timer = QTimer()
         self.traj_timer.timeout.connect(self.onTimeout)
         self.traj_timer.start(self.traj_dt)
 

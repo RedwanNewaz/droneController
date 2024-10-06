@@ -13,10 +13,16 @@ from PyQt5.QtCore import QTimer, QObject, pyqtSignal, pyqtSlot
 from .angle import angle_mod
 
 VIEWER_SCALE = 10.0 # meter to cm
+camera_position = (-0.440, -0.880, 1.938)
+camera_focal_point = (0.05, 0.00, 0.06)
+camera_up = (0.0, 0.65, 1.0)
 class Quadrotor(QObject):
     def __init__(self, centralwidget, dt, grid_shape):
         super(Quadrotor, self).__init__()
         self.plotter = QtInteractor(centralwidget)
+        self.plotter.camera.position = camera_position
+        self.plotter.camera.focal_point = camera_focal_point
+        self.plotter.camera.up = camera_up
         self._timer = QTimer()
         self._dt = dt
         self._trajIndex = 0
@@ -43,10 +49,13 @@ class Quadrotor(QObject):
 
         # Load and scale the robot mesh
         self.setActor((0.0, 0.0, 0.1))
+        self.plotter.add_axes()
 
         # Set up the camera
-        self.plotter.camera_position = 'iso'
-        self.plotter.reset_camera()
+        # self.plotter.camera_position = 'iso'
+        # self.plotter.reset_camera()
+        # print( 'camera ppos',   self.plotter.camera.position,
+        # self.plotter.camera.focal_point,   self.plotter.camera.up)
 
     def setActor(self, position):
         current_dir = os.path.dirname(os.path.abspath(__file__))
