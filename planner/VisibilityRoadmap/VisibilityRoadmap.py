@@ -27,7 +27,25 @@ class VisibilityRoadMap:
     def plan(self, start, goal):
         start_x, start_y = start[0], start[1]
         goal_x, goal_y = goal[0], goal[1]
-        return self.__planning(start_x, start_y, goal_x, goal_y, self.obstacles)
+        return self.__planning2(start_x, start_y, goal_x, goal_y, self.obstacles)
+
+    def __planning2(self, start_x, start_y, goal_x, goal_y, obstacles):
+
+        nodes = self.generate_visibility_nodes(start_x, start_y,
+                                               goal_x, goal_y, obstacles)
+
+        road_map_info = self.generate_road_map_info(nodes, obstacles)
+        searchAlg = DijkstraSearch(show_animation)
+
+        rx, ry = searchAlg.search(
+            start_x, start_y,
+            goal_x, goal_y,
+            [node.x for node in nodes],
+            [node.y for node in nodes],
+            road_map_info
+        )
+
+        return rx, ry, searchAlg.goalFound
 
     def __planning(self, start_x, start_y, goal_x, goal_y, obstacles):
         nodes = self.generate_visibility_nodes(start_x, start_y, goal_x, goal_y, obstacles)
@@ -64,6 +82,10 @@ class VisibilityRoadMap:
 
     def generate_visibility_nodes(self, start_x, start_y, goal_x, goal_y, obstacles):
         nodes = []
+
+        # add start and goal as nodes
+        nodes = [DijkstraSearch.Node(start_x, start_y),
+                 DijkstraSearch.Node(goal_x, goal_y, 0, None)]
 
         # Add vertexes in configuration space as nodes
         for obstacle in obstacles:

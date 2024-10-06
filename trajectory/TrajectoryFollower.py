@@ -48,6 +48,7 @@ class TrajectoryFollower(QObject):
             dt = self._dt * self.traj_dt / 1000.0
 
 
+
             altitude = 1.0
             headingAngle = 0.0
             setpoint = np.array([target[0], target[1], altitude, headingAngle, target_vel[0], target_vel[1], 0.0, 0.0])
