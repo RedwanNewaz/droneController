@@ -69,14 +69,18 @@ if __name__ == '__main__':
         return [sign, index]
 
     ActionDict = {'EAST': [0, -1, 0], 'NORTH': [-1, 0, 0], 'UP': [0, 1, 0]}
-    states = []
-    for action in ['EAST', 'NORTH', 'UP']:
+    states = np.zeros((3, 3))
+    for i, action in enumerate(['EAST', 'NORTH', 'UP']):
         traj = np.array(data[action])
         index = getSignedIndex(traj)
-        states.append(index[0])
+        states[i, index[1]] = index[0]
 
     states = np.array(states)
     actions = np.array(list(ActionDict.values()))
-    states = np.diag(states)
     rotationMatrix = actions @ states
-    print(f'[Calibration]:{filename}\n[RotationMatrix]:\n {rotationMatrix}')
+
+    print(f'[Calibration]:{filename}\n'
+          f'[states]: (x, y, z) \n {states}\n'
+          f'[actions]: (vx, vy, vz) \n {actions}\n'
+          f'[RotationMatrix]:\n {rotationMatrix}'
+          )
