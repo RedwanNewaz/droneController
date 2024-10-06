@@ -57,15 +57,6 @@ class Calibration:
         print("[+] calibration saved in envs folder as ", filename)
 
 if __name__ == '__main__':
-    # state = CalState(0)
-    # graph = getTransitionGraph()
-    # action_list = [i for i in range(6)]
-    # action_list.append(5)
-    # for a in action_list:
-    #     action = ActionType(a % 6)
-    #     nextstate = graph[state][action]
-    #     print(state.name, action.name, nextstate.name)
-    #     state = nextstate
     filename = '../envs/sim-2024-10-05_11-57-48.pkl'
     with open(filename, 'rb') as f:
         data = pickle.load(f)
@@ -77,7 +68,15 @@ if __name__ == '__main__':
         sign = np.sign(gradient[-1][index])
         return [sign, index]
 
+    ActionDict = {'EAST': [0, -1, 0], 'NORTH': [-1, 0, 0], 'UP': [0, 1, 0]}
+    states = []
     for action in ['EAST', 'NORTH', 'UP']:
         traj = np.array(data[action])
         index = getSignedIndex(traj)
-        print(index)
+        states.append(index[0])
+
+    states = np.array(states)
+    actions = np.array(list(ActionDict.values()))
+    states = np.diag(states)
+    rotationMatrix = actions @ states
+    print(f'[Calibration]:{filename}\n[RotationMatrix]:\n {rotationMatrix}')
