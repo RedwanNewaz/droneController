@@ -31,8 +31,7 @@ class PlannerInterface(QObject):
         self.pathPlot = None
         self.__roadmap = None
     
-        colors = ['red', 'green']
-        self.scatter = self.ax.scatter([-2, -2], [-2, -2], c=colors)
+
         super().__init__()
 
         # FIXME get start poisition from simulation
@@ -42,14 +41,22 @@ class PlannerInterface(QObject):
 
     def config_env(self, config):
         # ====Search Path with RRT====
+        self.ax.cla()
+        colors = ['red', 'green']
+        self.scatter = self.ax.scatter([-2, -2], [-2, -2], c=colors)
 
         self.obstacle_list = config['obstacle_list']
         boundary = np.array(config['boundary'])
-        self._shape = boundary 
-        self.boundary = boundary - (boundary / 2)
-        self.boundary[0] = -self.boundary[1]
-        self.boundary[2] = -self.boundary[3]
-        self.origin = np.array([self.boundary[0], self.boundary[2]])
+        origin = config['origin']
+        self._shape = boundary
+        if origin == 'center':
+            self.boundary = boundary - (boundary / 2)
+            self.boundary[0] = -self.boundary[1]
+            self.boundary[2] = -self.boundary[3]
+            self.origin = np.array([self.boundary[0], self.boundary[2]])
+        else:
+            self.boundary = boundary
+            self.origin = np.array([0, 0])
         self.dt = config['dt']
         self.ax.set_xlim(self.boundary[:2])
         self.ax.set_ylim(self.boundary[2:])
@@ -93,7 +100,7 @@ class PlannerInterface(QObject):
         offsets = self.scatter.get_offsets()
         # start, goal = offsets
         print(self.scatter.get_offsets())
-        self.demo(self.__start, self.__goal)
+        self.demo_visibility_roadmap(self.__start, self.__goal)
 
     def draw_obstacles(self, obstacle_list):
         for obstacle in obstacle_list:
@@ -121,7 +128,7 @@ class PlannerInterface(QObject):
                 self.update_point(1, event.xdata, event.ydata)
                 self.__goal = np.array([event.xdata, event.ydata])
     
-    def demo(self, start, goal):
+    def demo_visibility_roadmap(self, start, goal):
 
         if start is None:
             return
@@ -142,34 +149,34 @@ class PlannerInterface(QObject):
         # self.ax.grid(True)
         # print("found path!!: ")
         self.canvas.draw_idle()
+    def demo_rrt(self, start, goal):
 
+        # config collision checker
+        collisionManager = CollisionChecker(self.obstacle_list, self.boundary)
+        # Set Initial parameters
+        rrt_star = RRTStar(
+            start=start,
+            goal=goal,
+            rand_area=[-7, 7],
+            obstacle_list=self.obstacle_list,
+            expand_dis=1,
+            check_collision=collisionManager.check_collision,
+            robot_radius=0.25)
+        path = rrt_star.planning(animation=False)
 
-        # # config collision checker
-        # collisionManager = CollisionChecker(self.obstacle_list, self.boundary)
-        # # Set Initial parameters
-        # rrt_star = RRTStar(
-        #     start=start,
-        #     goal=goal,
-        #     rand_area=[-7, 7],
-        #     obstacle_list=self.obstacle_list,
-        #     expand_dis=1,
-        #     check_collision=collisionManager.check_collision,
-        #     robot_radius=0.25)
-        # path = rrt_star.planning(animation=False)
-        #
-        # if path is None:
-        #     print("Cannot find path")
-        # else:
-        #     while len(self.ax.lines):
-        #         for line in self.ax.lines:
-        #             line.remove()
-        #     self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'g--')
-        #     path = path_smoothing(path, rrt_star.max_iter, self.obstacle_list)
-        #     self.pathPlot, = self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'r--')
-        #
-        #     # self.ax.grid(True)
-        #     print("found path!!: ")
-        #     self.canvas.draw_idle()
+        if path is None:
+            print("Cannot find path")
+        else:
+            while len(self.ax.lines):
+                for line in self.ax.lines:
+                    line.remove()
+            self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'g--')
+            path = path_smoothing(path, rrt_star.max_iter, self.obstacle_list)
+            self.pathPlot, = self.ax.plot([x for (x, y) in path], [y for (x, y) in path], 'r--')
+
+            # self.ax.grid(True)
+            print("found path!!: ")
+            self.canvas.draw_idle()
 
 
 

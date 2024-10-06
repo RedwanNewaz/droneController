@@ -1,6 +1,7 @@
 dt: 0.1
 # boundary: [0.0, 5.33, 0.0, 4.69]
 boundary: [0.0, 6.0, 0.0, 5.0]
+origin: 'center'
 
 obstacle_list:
   - [-0.96, -0.16, 1]

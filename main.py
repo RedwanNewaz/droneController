@@ -68,6 +68,7 @@ class MainWindow(QMainWindow):
         self.num_points = 760
         self.traj_dt = 200
         self._robot = None
+        self.quad = None
 
         if args.sim:
             self.radioSim.setChecked(True)
@@ -129,8 +130,14 @@ class MainWindow(QMainWindow):
         # Create the PyVista QtInteractor
         boundary = config['boundary']
         self._dt = dt = config['dt']
+        origin = config['origin']
         shape = np.array([boundary[1] - boundary[0], boundary[3] - boundary[2], 0]).astype('int')
-        self.quad = Quadrotor(self.centralwidget, dt, shape)
+
+        if self.quad is None:
+            self.quad = Quadrotor(self.centralwidget, dt, shape)
+            self.quad.init(shape, origin)
+        else:
+            self.quad.init(shape, origin)
         # add send trajectory button
         # self.btnSendTraj.clicked.connect(self.quad.sendTrajectory)
         self.btnSendTraj.clicked.connect(self.sendTrajectory)

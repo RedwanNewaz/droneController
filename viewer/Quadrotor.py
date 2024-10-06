@@ -22,13 +22,19 @@ class Quadrotor(QObject):
         self._trajIndex = 0
         self.viewer_points = None
         self.scale = VIEWER_SCALE
+
+    def init(self, grid_shape, origin):
+        # Clears all actors
+        self.plotter.clear()
         # Create the grid world
         dx, dy, dz = 0.1, 0.1, 0.1  # 10 cm spacing
 
         self.grid = pv.ImageData()
         self.grid.dimensions = np.array(grid_shape) + 1  # Add 1 to create cells
-       
-        self.grid.origin = (-grid_shape[0] / 20, -grid_shape[1] / 20, 0)
+
+        self.grid.origin = (0, 0, 0)
+        if origin == 'center':
+            self.grid.origin = (-grid_shape[0] / 20, -grid_shape[1] / 20, 0)
      
         self.grid.spacing = (dx, dy, dz)
 
