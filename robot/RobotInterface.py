@@ -11,17 +11,18 @@ logging.basicConfig(
     datefmt='%H:%M:%S')
 
 class RobotInterface(QThread):
-    def __init__(self, mainWindow):
+    def __init__(self, mainWindow, robot_name):
         self.vehicle = None
         self.state = State.LAND
         self.mainWindow = mainWindow
+        self.robot_name = robot_name
         super().__init__()
     
     def run(self):
 
         self.state = State.INITIALIZED
         #TODO take args from mainWindow
-        self._vicon = ViconClient(obj_name="djimini", ip_address="192.168.10.2", parent=self)
+        self._vicon = ViconClient(obj_name=self.robot_name, ip_address="192.168.10.2", parent=self)
         self._vicon.pose_signal.connect(self.updateLocationGUI)
         self.mainWindow.progressBar.setValue(25)
         while not self._vicon.isConnected():

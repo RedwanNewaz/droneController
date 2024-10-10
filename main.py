@@ -36,6 +36,8 @@ class MainWindow(QMainWindow):
         self._robot = None
         self._quad = None
         self._trajFollower = None
+        self._robotName = args.robot
+        print('robot name, ', self._robotName)
 
         if args.sim:
             self.radioSim.setChecked(True)
@@ -117,7 +119,7 @@ class MainWindow(QMainWindow):
 
     def updateExpType(self):
         self.__isSim = self.radioSim.isChecked()
-        self._robot = SimulatorInterface(self) if self.__isSim else RobotInterface(self)
+        self._robot = SimulatorInterface(self) if self.__isSim else RobotInterface(self, self._robotName)
         self._robot.start()
 
     def sendTrajectory(self):
@@ -128,6 +130,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--robot', type=str, required=True, choices=['djimini', 'mavicair1'])
     parser.add_argument('--sim', action='store_true', help='simulation')
     args = parser.parse_args()
 

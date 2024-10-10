@@ -1,9 +1,11 @@
+#!/home/airlab/anaconda3/envs/droneController3D/bin/python
 import pickle
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
-
+import argparse
 import numpy as np
+import os
 
 
 class CalState(Enum):
@@ -65,7 +67,17 @@ class Calibration:
         print("[+] calibration saved in envs folder as ", filename)
 
 if __name__ == '__main__':
-    filename = '../envs/sim-2024-10-05_11-57-48.pkl'
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--file', type=str, default='2024-10-07_11-34-16.pkl', help='calibration file')
+    parser.add_argument('--root-dir', type=str, default='../envs', help='root folder for calibration file')
+
+    args = parser.parse_args()
+
+    filename = os.path.join(args.root_dir, args.file)
+    
+    
+    
     with open(filename, 'rb') as f:
         data = pickle.load(f)
 
@@ -76,7 +88,7 @@ if __name__ == '__main__':
         sign = np.sign(gradient[-1][index])
         return [sign, index]
 
-    ActionDict = {'EAST': [0, -1, 0], 'NORTH': [-1, 0, 0], 'UP': [0, 1, 0]}
+    ActionDict = {'EAST': [0, -1, 0], 'NORTH': [-1, 0, 0], 'UP': [0, 0, 1]}
     states = np.zeros((3, 3))
     for i, action in enumerate(['EAST', 'NORTH', 'UP']):
         traj = np.array(data[action])

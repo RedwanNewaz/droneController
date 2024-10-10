@@ -41,7 +41,7 @@ class TrajectoryFollower(QObject):
         self.traj_timer.start(self.traj_dt)
 
     def onTimeout(self):
-        self.traj_index += 1
+        self.traj_index += 2
         if self.traj_index < len(self.traj):
             target = self.traj[self.traj_index]
             target_vel = self.traj_vel[self.traj_index]
@@ -66,6 +66,8 @@ class TrajectoryFollower(QObject):
             z = np.array([self.coord[0], self.coord[1], self.coord[2], 0.0])
             u = K @ error
             cmd_vel = self._bodyFrame @ u[:3]
+            # cmd_vel = np.clip(cmd_vel, -0.1, 0.1)
+            cmd_vel = np.clip(cmd_vel, -0.25, 0.25)
             logging.debug(f'u = {u}, body frame = {self._bodyFrame.flatten()} cmd_vel = {cmd_vel}')
 
             self._controller.publish_cmd_vel(cmd_vel[0], cmd_vel[1], cmd_vel[2])
