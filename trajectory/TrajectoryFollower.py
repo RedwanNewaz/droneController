@@ -67,7 +67,7 @@ class TrajectoryFollower(QObject):
             u = K @ error
             cmd_vel = self._bodyFrame @ u[:3]
             # cmd_vel = np.clip(cmd_vel, -0.1, 0.1)
-            cmd_vel = np.clip(cmd_vel, -0.25, 0.25)
+            cmd_vel = np.clip(cmd_vel, -0.175, 0.175)
             logging.debug(f'u = {u}, body frame = {self._bodyFrame.flatten()} cmd_vel = {cmd_vel}')
 
             self._controller.publish_cmd_vel(cmd_vel[0], cmd_vel[1], cmd_vel[2])
